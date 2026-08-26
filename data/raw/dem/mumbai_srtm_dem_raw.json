@@ -1,0 +1,553 @@
+{
+  "dataset_name": "NASA SRTM 30m / Copernicus DEM Raw Elevation",
+  "region": "Mumbai Urban Pilot",
+  "bounding_box": {
+    "lat_min": 18.98,
+    "lat_max": 19.16,
+    "lon_min": 72.8,
+    "lon_max": 72.96
+  },
+  "total_points": 90,
+  "data": [
+    {
+      "cell_id": 0,
+      "latitude": 18.98,
+      "longitude": 72.8,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 1,
+      "latitude": 18.98,
+      "longitude": 72.82,
+      "elevation_meters": 9.0
+    },
+    {
+      "cell_id": 2,
+      "latitude": 18.98,
+      "longitude": 72.84,
+      "elevation_meters": 13.0
+    },
+    {
+      "cell_id": 3,
+      "latitude": 18.98,
+      "longitude": 72.86,
+      "elevation_meters": 8.0
+    },
+    {
+      "cell_id": 4,
+      "latitude": 18.98,
+      "longitude": 72.88,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 5,
+      "latitude": 18.98,
+      "longitude": 72.9,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 6,
+      "latitude": 18.98,
+      "longitude": 72.92,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 7,
+      "latitude": 18.98,
+      "longitude": 72.94,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 8,
+      "latitude": 18.98,
+      "longitude": 72.96,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 9,
+      "latitude": 19.0,
+      "longitude": 72.8,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 10,
+      "latitude": 19.0,
+      "longitude": 72.82,
+      "elevation_meters": 10.0
+    },
+    {
+      "cell_id": 11,
+      "latitude": 19.0,
+      "longitude": 72.84,
+      "elevation_meters": 15.0
+    },
+    {
+      "cell_id": 12,
+      "latitude": 19.0,
+      "longitude": 72.86,
+      "elevation_meters": 12.0
+    },
+    {
+      "cell_id": 13,
+      "latitude": 19.0,
+      "longitude": 72.88,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 14,
+      "latitude": 19.0,
+      "longitude": 72.9,
+      "elevation_meters": 6.0
+    },
+    {
+      "cell_id": 15,
+      "latitude": 19.0,
+      "longitude": 72.92,
+      "elevation_meters": 5.0
+    },
+    {
+      "cell_id": 16,
+      "latitude": 19.0,
+      "longitude": 72.94,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 17,
+      "latitude": 19.0,
+      "longitude": 72.96,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 18,
+      "latitude": 19.02,
+      "longitude": 72.8,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 19,
+      "latitude": 19.02,
+      "longitude": 72.82,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 20,
+      "latitude": 19.02,
+      "longitude": 72.84,
+      "elevation_meters": 11.0
+    },
+    {
+      "cell_id": 21,
+      "latitude": 19.02,
+      "longitude": 72.86,
+      "elevation_meters": 14.0
+    },
+    {
+      "cell_id": 22,
+      "latitude": 19.02,
+      "longitude": 72.88,
+      "elevation_meters": 4.0
+    },
+    {
+      "cell_id": 23,
+      "latitude": 19.02,
+      "longitude": 72.9,
+      "elevation_meters": 16.0
+    },
+    {
+      "cell_id": 24,
+      "latitude": 19.02,
+      "longitude": 72.92,
+      "elevation_meters": 94.0
+    },
+    {
+      "cell_id": 25,
+      "latitude": 19.02,
+      "longitude": 72.94,
+      "elevation_meters": 6.0
+    },
+    {
+      "cell_id": 26,
+      "latitude": 19.02,
+      "longitude": 72.96,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 27,
+      "latitude": 19.04,
+      "longitude": 72.8,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 28,
+      "latitude": 19.04,
+      "longitude": 72.82,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 29,
+      "latitude": 19.04,
+      "longitude": 72.84,
+      "elevation_meters": 11.0
+    },
+    {
+      "cell_id": 30,
+      "latitude": 19.04,
+      "longitude": 72.86,
+      "elevation_meters": 9.0
+    },
+    {
+      "cell_id": 31,
+      "latitude": 19.04,
+      "longitude": 72.88,
+      "elevation_meters": 3.0
+    },
+    {
+      "cell_id": 32,
+      "latitude": 19.04,
+      "longitude": 72.9,
+      "elevation_meters": 19.0
+    },
+    {
+      "cell_id": 33,
+      "latitude": 19.04,
+      "longitude": 72.92,
+      "elevation_meters": 22.0
+    },
+    {
+      "cell_id": 34,
+      "latitude": 19.04,
+      "longitude": 72.94,
+      "elevation_meters": 15.0
+    },
+    {
+      "cell_id": 35,
+      "latitude": 19.04,
+      "longitude": 72.96,
+      "elevation_meters": 6.0
+    },
+    {
+      "cell_id": 36,
+      "latitude": 19.06,
+      "longitude": 72.8,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 37,
+      "latitude": 19.06,
+      "longitude": 72.82,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 38,
+      "latitude": 19.06,
+      "longitude": 72.84,
+      "elevation_meters": 7.0
+    },
+    {
+      "cell_id": 39,
+      "latitude": 19.06,
+      "longitude": 72.86,
+      "elevation_meters": 9.0
+    },
+    {
+      "cell_id": 40,
+      "latitude": 19.06,
+      "longitude": 72.88,
+      "elevation_meters": 9.0
+    },
+    {
+      "cell_id": 41,
+      "latitude": 19.06,
+      "longitude": 72.9,
+      "elevation_meters": 15.0
+    },
+    {
+      "cell_id": 42,
+      "latitude": 19.06,
+      "longitude": 72.92,
+      "elevation_meters": 7.0
+    },
+    {
+      "cell_id": 43,
+      "latitude": 19.06,
+      "longitude": 72.94,
+      "elevation_meters": 6.0
+    },
+    {
+      "cell_id": 44,
+      "latitude": 19.06,
+      "longitude": 72.96,
+      "elevation_meters": 4.0
+    },
+    {
+      "cell_id": 45,
+      "latitude": 19.08,
+      "longitude": 72.8,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 46,
+      "latitude": 19.08,
+      "longitude": 72.82,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 47,
+      "latitude": 19.08,
+      "longitude": 72.84,
+      "elevation_meters": 12.0
+    },
+    {
+      "cell_id": 48,
+      "latitude": 19.08,
+      "longitude": 72.86,
+      "elevation_meters": 22.0
+    },
+    {
+      "cell_id": 49,
+      "latitude": 19.08,
+      "longitude": 72.88,
+      "elevation_meters": 9.0
+    },
+    {
+      "cell_id": 50,
+      "latitude": 19.08,
+      "longitude": 72.9,
+      "elevation_meters": 13.0
+    },
+    {
+      "cell_id": 51,
+      "latitude": 19.08,
+      "longitude": 72.92,
+      "elevation_meters": 6.0
+    },
+    {
+      "cell_id": 52,
+      "latitude": 19.08,
+      "longitude": 72.94,
+      "elevation_meters": 3.0
+    },
+    {
+      "cell_id": 53,
+      "latitude": 19.08,
+      "longitude": 72.96,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 54,
+      "latitude": 19.1,
+      "longitude": 72.8,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 55,
+      "latitude": 19.1,
+      "longitude": 72.82,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 56,
+      "latitude": 19.1,
+      "longitude": 72.84,
+      "elevation_meters": 12.0
+    },
+    {
+      "cell_id": 57,
+      "latitude": 19.1,
+      "longitude": 72.86,
+      "elevation_meters": 16.0
+    },
+    {
+      "cell_id": 58,
+      "latitude": 19.1,
+      "longitude": 72.88,
+      "elevation_meters": 9.0
+    },
+    {
+      "cell_id": 59,
+      "latitude": 19.1,
+      "longitude": 72.9,
+      "elevation_meters": 42.0
+    },
+    {
+      "cell_id": 60,
+      "latitude": 19.1,
+      "longitude": 72.92,
+      "elevation_meters": 22.0
+    },
+    {
+      "cell_id": 61,
+      "latitude": 19.1,
+      "longitude": 72.94,
+      "elevation_meters": 4.0
+    },
+    {
+      "cell_id": 62,
+      "latitude": 19.1,
+      "longitude": 72.96,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 63,
+      "latitude": 19.12,
+      "longitude": 72.8,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 64,
+      "latitude": 19.12,
+      "longitude": 72.82,
+      "elevation_meters": 2.0
+    },
+    {
+      "cell_id": 65,
+      "latitude": 19.12,
+      "longitude": 72.84,
+      "elevation_meters": 25.0
+    },
+    {
+      "cell_id": 66,
+      "latitude": 19.12,
+      "longitude": 72.86,
+      "elevation_meters": 37.0
+    },
+    {
+      "cell_id": 67,
+      "latitude": 19.12,
+      "longitude": 72.88,
+      "elevation_meters": 29.0
+    },
+    {
+      "cell_id": 68,
+      "latitude": 19.12,
+      "longitude": 72.9,
+      "elevation_meters": 36.0
+    },
+    {
+      "cell_id": 69,
+      "latitude": 19.12,
+      "longitude": 72.92,
+      "elevation_meters": 67.0
+    },
+    {
+      "cell_id": 70,
+      "latitude": 19.12,
+      "longitude": 72.94,
+      "elevation_meters": 8.0
+    },
+    {
+      "cell_id": 71,
+      "latitude": 19.12,
+      "longitude": 72.96,
+      "elevation_meters": 8.0
+    },
+    {
+      "cell_id": 72,
+      "latitude": 19.14,
+      "longitude": 72.8,
+      "elevation_meters": 0.0
+    },
+    {
+      "cell_id": 73,
+      "latitude": 19.14,
+      "longitude": 72.82,
+      "elevation_meters": 10.0
+    },
+    {
+      "cell_id": 74,
+      "latitude": 19.14,
+      "longitude": 72.84,
+      "elevation_meters": 15.0
+    },
+    {
+      "cell_id": 75,
+      "latitude": 19.14,
+      "longitude": 72.86,
+      "elevation_meters": 35.0
+    },
+    {
+      "cell_id": 76,
+      "latitude": 19.14,
+      "longitude": 72.88,
+      "elevation_meters": 50.0
+    },
+    {
+      "cell_id": 77,
+      "latitude": 19.14,
+      "longitude": 72.9,
+      "elevation_meters": 53.0
+    },
+    {
+      "cell_id": 78,
+      "latitude": 19.14,
+      "longitude": 72.92,
+      "elevation_meters": 65.0
+    },
+    {
+      "cell_id": 79,
+      "latitude": 19.14,
+      "longitude": 72.94,
+      "elevation_meters": 5.0
+    },
+    {
+      "cell_id": 80,
+      "latitude": 19.14,
+      "longitude": 72.96,
+      "elevation_meters": 4.0
+    },
+    {
+      "cell_id": 81,
+      "latitude": 19.16,
+      "longitude": 72.8,
+      "elevation_meters": 5.0
+    },
+    {
+      "cell_id": 82,
+      "latitude": 19.16,
+      "longitude": 72.82,
+      "elevation_meters": 4.0
+    },
+    {
+      "cell_id": 83,
+      "latitude": 19.16,
+      "longitude": 72.84,
+      "elevation_meters": 13.0
+    },
+    {
+      "cell_id": 84,
+      "latitude": 19.16,
+      "longitude": 72.86,
+      "elevation_meters": 16.0
+    },
+    {
+      "cell_id": 85,
+      "latitude": 19.16,
+      "longitude": 72.88,
+      "elevation_meters": 39.0
+    },
+    {
+      "cell_id": 86,
+      "latitude": 19.16,
+      "longitude": 72.9,
+      "elevation_meters": 134.0
+    },
+    {
+      "cell_id": 87,
+      "latitude": 19.16,
+      "longitude": 72.92,
+      "elevation_meters": 53.0
+    },
+    {
+      "cell_id": 88,
+      "latitude": 19.16,
+      "longitude": 72.94,
+      "elevation_meters": 15.0
+    },
+    {
+      "cell_id": 89,
+      "latitude": 19.16,
+      "longitude": 72.96,
+      "elevation_meters": 3.0
+    }
+  ]
+}

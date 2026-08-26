@@ -1,0 +1,942 @@
+{
+  "region_code": "IN-MH-BOM-01",
+  "product_name": "VARUNA Multi-Sensor Soil Moisture & Instability Proxy Grid",
+  "records": [
+    {
+      "timestep_id": 1,
+      "timestamp": "2024-07-26T00:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 45.02,
+      "atmospheric_cape_jkg": 887.5,
+      "convective_cloud_top_temp_celsius": -56.1,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 2,
+      "timestamp": "2024-07-26T01:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 46.17,
+      "atmospheric_cape_jkg": 907.5,
+      "convective_cloud_top_temp_celsius": -56.3,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 3,
+      "timestamp": "2024-07-26T02:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 47.37,
+      "atmospheric_cape_jkg": 927.5,
+      "convective_cloud_top_temp_celsius": -56.6,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 4,
+      "timestamp": "2024-07-26T03:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 48.52,
+      "atmospheric_cape_jkg": 947.5,
+      "convective_cloud_top_temp_celsius": -56.8,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 5,
+      "timestamp": "2024-07-26T04:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 49.67,
+      "atmospheric_cape_jkg": 967.5,
+      "convective_cloud_top_temp_celsius": -57.1,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 6,
+      "timestamp": "2024-07-26T05:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 50.87,
+      "atmospheric_cape_jkg": 987.5,
+      "convective_cloud_top_temp_celsius": -57.3,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 7,
+      "timestamp": "2024-07-26T06:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 52.02,
+      "atmospheric_cape_jkg": 1007.5,
+      "convective_cloud_top_temp_celsius": -57.6,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 8,
+      "timestamp": "2024-07-26T07:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 53.22,
+      "atmospheric_cape_jkg": 1027.5,
+      "convective_cloud_top_temp_celsius": -57.8,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 9,
+      "timestamp": "2024-07-26T08:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 54.37,
+      "atmospheric_cape_jkg": 1047.5,
+      "convective_cloud_top_temp_celsius": -58.1,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 10,
+      "timestamp": "2024-07-26T09:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 55.52,
+      "atmospheric_cape_jkg": 1067.5,
+      "convective_cloud_top_temp_celsius": -58.3,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 11,
+      "timestamp": "2024-07-26T10:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 56.72,
+      "atmospheric_cape_jkg": 1087.5,
+      "convective_cloud_top_temp_celsius": -58.6,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 12,
+      "timestamp": "2024-07-26T11:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 57.87,
+      "atmospheric_cape_jkg": 1107.5,
+      "convective_cloud_top_temp_celsius": -58.8,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 13,
+      "timestamp": "2024-07-26T12:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 59.07,
+      "atmospheric_cape_jkg": 1127.5,
+      "convective_cloud_top_temp_celsius": -59.1,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 14,
+      "timestamp": "2024-07-26T13:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 60.22,
+      "atmospheric_cape_jkg": 1147.5,
+      "convective_cloud_top_temp_celsius": -59.3,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 15,
+      "timestamp": "2024-07-26T14:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 61.36,
+      "atmospheric_cape_jkg": 1167.5,
+      "convective_cloud_top_temp_celsius": -59.6,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 16,
+      "timestamp": "2024-07-26T15:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 62.56,
+      "atmospheric_cape_jkg": 1187.5,
+      "convective_cloud_top_temp_celsius": -59.8,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 17,
+      "timestamp": "2024-07-26T16:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 63.71,
+      "atmospheric_cape_jkg": 1207.5,
+      "convective_cloud_top_temp_celsius": -60.1,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 18,
+      "timestamp": "2024-07-26T17:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 64.91,
+      "atmospheric_cape_jkg": 1227.5,
+      "convective_cloud_top_temp_celsius": -60.3,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 19,
+      "timestamp": "2024-07-26T18:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 65.96,
+      "atmospheric_cape_jkg": 1742.5,
+      "convective_cloud_top_temp_celsius": -66.8,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 20,
+      "timestamp": "2024-07-26T19:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 67.59,
+      "atmospheric_cape_jkg": 1817.5,
+      "convective_cloud_top_temp_celsius": -67.7,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 21,
+      "timestamp": "2024-07-26T20:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 69.21,
+      "atmospheric_cape_jkg": 1892.5,
+      "convective_cloud_top_temp_celsius": -68.7,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 22,
+      "timestamp": "2024-07-26T21:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 70.78,
+      "atmospheric_cape_jkg": 1967.5,
+      "convective_cloud_top_temp_celsius": -69.6,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 23,
+      "timestamp": "2024-07-26T22:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 72.41,
+      "atmospheric_cape_jkg": 2042.5,
+      "convective_cloud_top_temp_celsius": -70.5,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 24,
+      "timestamp": "2024-07-26T23:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 74.06,
+      "atmospheric_cape_jkg": 2117.5,
+      "convective_cloud_top_temp_celsius": -71.5,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 25,
+      "timestamp": "2024-07-27T00:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 75.71,
+      "atmospheric_cape_jkg": 2192.5,
+      "convective_cloud_top_temp_celsius": -72.4,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 26,
+      "timestamp": "2024-07-27T01:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 77.33,
+      "atmospheric_cape_jkg": 2267.5,
+      "convective_cloud_top_temp_celsius": -73.3,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 27,
+      "timestamp": "2024-07-27T02:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 78.96,
+      "atmospheric_cape_jkg": 2342.5,
+      "convective_cloud_top_temp_celsius": -74.3,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 28,
+      "timestamp": "2024-07-27T03:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 80.53,
+      "atmospheric_cape_jkg": 2417.5,
+      "convective_cloud_top_temp_celsius": -75.2,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 29,
+      "timestamp": "2024-07-27T04:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 82.15,
+      "atmospheric_cape_jkg": 2492.5,
+      "convective_cloud_top_temp_celsius": -76.2,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 30,
+      "timestamp": "2024-07-27T05:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 83.8,
+      "atmospheric_cape_jkg": 2567.5,
+      "convective_cloud_top_temp_celsius": -77.1,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 31,
+      "timestamp": "2024-07-27T06:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 87.6,
+      "atmospheric_cape_jkg": 2800.8,
+      "convective_cloud_top_temp_celsius": -80.0,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 32,
+      "timestamp": "2024-07-27T07:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 89.35,
+      "atmospheric_cape_jkg": 2734.2,
+      "convective_cloud_top_temp_celsius": -79.2,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 33,
+      "timestamp": "2024-07-27T08:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 91.6,
+      "atmospheric_cape_jkg": 2667.5,
+      "convective_cloud_top_temp_celsius": -78.3,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 34,
+      "timestamp": "2024-07-27T09:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 93.8,
+      "atmospheric_cape_jkg": 2600.8,
+      "convective_cloud_top_temp_celsius": -77.5,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 35,
+      "timestamp": "2024-07-27T10:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 95.32,
+      "atmospheric_cape_jkg": 2534.2,
+      "convective_cloud_top_temp_celsius": -76.7,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 36,
+      "timestamp": "2024-07-27T11:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 95.84,
+      "atmospheric_cape_jkg": 2467.5,
+      "convective_cloud_top_temp_celsius": -75.8,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 37,
+      "timestamp": "2024-07-27T12:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 95.32,
+      "atmospheric_cape_jkg": 2400.8,
+      "convective_cloud_top_temp_celsius": -75.0,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 38,
+      "timestamp": "2024-07-27T13:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 93.8,
+      "atmospheric_cape_jkg": 2334.2,
+      "convective_cloud_top_temp_celsius": -74.2,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 39,
+      "timestamp": "2024-07-27T14:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 91.6,
+      "atmospheric_cape_jkg": 2267.5,
+      "convective_cloud_top_temp_celsius": -73.3,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 40,
+      "timestamp": "2024-07-27T15:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 89.35,
+      "atmospheric_cape_jkg": 2200.8,
+      "convective_cloud_top_temp_celsius": -72.5,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 41,
+      "timestamp": "2024-07-27T16:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 87.6,
+      "atmospheric_cape_jkg": 2134.2,
+      "convective_cloud_top_temp_celsius": -71.7,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 42,
+      "timestamp": "2024-07-27T17:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 86.58,
+      "atmospheric_cape_jkg": 2067.5,
+      "convective_cloud_top_temp_celsius": -70.8,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 43,
+      "timestamp": "2024-07-27T18:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 90.97,
+      "atmospheric_cape_jkg": 1234.2,
+      "convective_cloud_top_temp_celsius": -60.4,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 44,
+      "timestamp": "2024-07-27T19:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 90.27,
+      "atmospheric_cape_jkg": 1200.8,
+      "convective_cloud_top_temp_celsius": -60.0,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 45,
+      "timestamp": "2024-07-27T20:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 89.65,
+      "atmospheric_cape_jkg": 1167.5,
+      "convective_cloud_top_temp_celsius": -59.6,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 46,
+      "timestamp": "2024-07-27T21:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 89.02,
+      "atmospheric_cape_jkg": 1134.2,
+      "convective_cloud_top_temp_celsius": -59.2,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 47,
+      "timestamp": "2024-07-27T22:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 88.32,
+      "atmospheric_cape_jkg": 1100.8,
+      "convective_cloud_top_temp_celsius": -58.8,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 48,
+      "timestamp": "2024-07-27T23:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 87.7,
+      "atmospheric_cape_jkg": 1067.5,
+      "convective_cloud_top_temp_celsius": -58.3,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 49,
+      "timestamp": "2024-07-28T00:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 87.08,
+      "atmospheric_cape_jkg": 1034.2,
+      "convective_cloud_top_temp_celsius": -57.9,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 50,
+      "timestamp": "2024-07-28T01:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 86.38,
+      "atmospheric_cape_jkg": 1000.8,
+      "convective_cloud_top_temp_celsius": -57.5,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 51,
+      "timestamp": "2024-07-28T02:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 85.75,
+      "atmospheric_cape_jkg": 967.5,
+      "convective_cloud_top_temp_celsius": -57.1,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 52,
+      "timestamp": "2024-07-28T03:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 85.13,
+      "atmospheric_cape_jkg": 934.2,
+      "convective_cloud_top_temp_celsius": -56.7,
+      "soil_saturation_status": "SUPER_SATURATED"
+    },
+    {
+      "timestep_id": 53,
+      "timestamp": "2024-07-28T04:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 84.43,
+      "atmospheric_cape_jkg": 900.8,
+      "convective_cloud_top_temp_celsius": -56.3,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 54,
+      "timestamp": "2024-07-28T05:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 83.8,
+      "atmospheric_cape_jkg": 867.5,
+      "convective_cloud_top_temp_celsius": -55.8,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 55,
+      "timestamp": "2024-07-28T06:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 82.15,
+      "atmospheric_cape_jkg": 656.4,
+      "convective_cloud_top_temp_celsius": -53.2,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 56,
+      "timestamp": "2024-07-28T07:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 80.53,
+      "atmospheric_cape_jkg": 645.3,
+      "convective_cloud_top_temp_celsius": -53.1,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 57,
+      "timestamp": "2024-07-28T08:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 78.96,
+      "atmospheric_cape_jkg": 634.2,
+      "convective_cloud_top_temp_celsius": -52.9,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 58,
+      "timestamp": "2024-07-28T09:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 77.33,
+      "atmospheric_cape_jkg": 623.1,
+      "convective_cloud_top_temp_celsius": -52.8,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 59,
+      "timestamp": "2024-07-28T10:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 75.71,
+      "atmospheric_cape_jkg": 611.9,
+      "convective_cloud_top_temp_celsius": -52.6,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 60,
+      "timestamp": "2024-07-28T11:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 74.06,
+      "atmospheric_cape_jkg": 600.8,
+      "convective_cloud_top_temp_celsius": -52.5,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 61,
+      "timestamp": "2024-07-28T12:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 72.41,
+      "atmospheric_cape_jkg": 589.7,
+      "convective_cloud_top_temp_celsius": -52.4,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 62,
+      "timestamp": "2024-07-28T13:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 70.78,
+      "atmospheric_cape_jkg": 578.6,
+      "convective_cloud_top_temp_celsius": -52.2,
+      "soil_saturation_status": "HIGH"
+    },
+    {
+      "timestep_id": 63,
+      "timestamp": "2024-07-28T14:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 69.21,
+      "atmospheric_cape_jkg": 567.5,
+      "convective_cloud_top_temp_celsius": -52.1,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 64,
+      "timestamp": "2024-07-28T15:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 67.59,
+      "atmospheric_cape_jkg": 556.4,
+      "convective_cloud_top_temp_celsius": -52.0,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 65,
+      "timestamp": "2024-07-28T16:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 65.94,
+      "atmospheric_cape_jkg": 545.3,
+      "convective_cloud_top_temp_celsius": -51.8,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 66,
+      "timestamp": "2024-07-28T17:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 64.31,
+      "atmospheric_cape_jkg": 534.2,
+      "convective_cloud_top_temp_celsius": -51.7,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 67,
+      "timestamp": "2024-07-28T18:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 62.66,
+      "atmospheric_cape_jkg": 523.1,
+      "convective_cloud_top_temp_celsius": -51.5,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 68,
+      "timestamp": "2024-07-28T19:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 61.04,
+      "atmospheric_cape_jkg": 511.9,
+      "convective_cloud_top_temp_celsius": -51.4,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 69,
+      "timestamp": "2024-07-28T20:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 59.39,
+      "atmospheric_cape_jkg": 500.8,
+      "convective_cloud_top_temp_celsius": -51.3,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 70,
+      "timestamp": "2024-07-28T21:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 57.84,
+      "atmospheric_cape_jkg": 489.7,
+      "convective_cloud_top_temp_celsius": -51.1,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 71,
+      "timestamp": "2024-07-28T22:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 56.22,
+      "atmospheric_cape_jkg": 478.6,
+      "convective_cloud_top_temp_celsius": -51.0,
+      "soil_saturation_status": "MODERATE"
+    },
+    {
+      "timestep_id": 72,
+      "timestamp": "2024-07-28T23:00:00Z",
+      "sensor_sources": [
+        "Copernicus Sentinel-1 SAR Surface Soil Moisture",
+        "INSAT-3DR Rapid-Scan Hydro-Estimator",
+        "GPM IMERG Late Precipitation Product"
+      ],
+      "regional_soil_saturation_pct": 54.57,
+      "atmospheric_cape_jkg": 467.5,
+      "convective_cloud_top_temp_celsius": -50.8,
+      "soil_saturation_status": "MODERATE"
+    }
+  ]
+}
