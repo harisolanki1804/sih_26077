@@ -1,29 +1,3 @@
-<div align="center">
-
-# 🌊 Project VARUNA
-### Hyper-Local AI Early Warning & Multi-Hazard Decision Platform for Urban Flash Floods
-
-[![Python Version](https://img.shields.io/badge/Python-3.12%2B-blue.svg?style=for-the-badge&logo=python)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688.svg?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
-[![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0%2B-D71F00.svg?style=for-the-badge&logo=sqlalchemy)](https://www.sqlalchemy.org)
-[![Database](https://img.shields.io/badge/Database-SQLite%20%7C%20PostgreSQL-336791.svg?style=for-the-badge&logo=postgresql)](https://postgresql.org)
-[![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
-
-</div>
-
----
-
-## 📖 Executive Summary
-
-**Project VARUNA** is an AI-driven multi-hazard early warning and operational decision-support platform designed to forecast, monitor, and explain hyper-local urban flash floods and extreme monsoon deluges.
-
-### 🌟 Key Pillars
-* **Raw Multi-Source Open Ingestion**: Sourced directly from **NASA SRTM 30m DEM**, **ECMWF ERA5-Land Reanalysis**, and **Copernicus Soil Moisture** proxies without subscription costs or API keys.
-* **Explainable AI Hazard Architecture**: Additive score decomposition across Precipitation Intensity ($40\%$), Soil Saturation ($25\%$), DEM Topography & Basin Traps ($20\%$), and Atmospheric CAPE Instability ($15\%$).
-* **DEM Inundation Heuristics**: Estimates ponding depth ($cm$) factoring urban depression bowls, runoff coefficients, and tidal backwater locks.
-* **Historical Deluge Replay Engine**: Drives simulated live-stream playback of extreme storm events step-by-step for operator training and model validation.
-
----
 
 ## 📍 Pilot Study: Mumbai Urban Flood Corridor
 
@@ -244,17 +218,4 @@ python backend/test_api.py
 | `POST` | `/api/v1/replay/step` | Advance storm simulation 1 timestep or jump to peak |
 | `POST` | `/api/v1/replay/reset` | Reset simulation to pre-storm baseline |
 
----
 
-## 👥 Team Roles & Responsibilities
-
-| Role / Owner | Scope of Ownership |
-|---|---|
-| **Rudra** | Dataset Sourcing & Ingestion Pipeline; FastAPI Backend + Database (SQLite/PostgreSQL); Events & Alerts API; Replay Engine; System Architecture |
-| **Model Team** | Feature Engineering, ML Training, Prediction Models (Flash Flood / Cloudburst Classifier), Inundation Routing |
-| **Frontend Team** | React / Mapbox Command Dashboard, Live Alert Stream, Explainability Detail Panel |
-
----
-
-## 📄 License
-Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for details.
