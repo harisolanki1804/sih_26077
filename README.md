@@ -14,40 +14,37 @@
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ System Architecture & Team Boundaries
 
 ```mermaid
 flowchart TD
-    subgraph DataSourcing["1. Free & Open Data Sourcing"]
+    subgraph Rudra_Data["1. Data Sourcing & Raw Ingestion (Rudra)"]
         DEM[NASA SRTM 30m DEM] --> RawDEM[Raw Elevation Matrix]
-        ERA5[ECMWF ERA5-Land] --> RawPrecip[Raw Hourly Precipitation & Weather]
+        ERA5[ECMWF ERA5-Land Archive] --> RawPrecip[Raw Hourly Rainfall & Weather]
         Soil[Copernicus Reanalysis] --> RawSoil[Raw Volumetric Soil Water]
-    end
-
-    subgraph Storage["2. Data Lake & Relational DB"]
         RawDEM --> RawDir[VARUNA/data/raw/]
         RawPrecip --> RawDir
         RawSoil --> RawDir
-        RawDir --> DB[(SQLite / PostgreSQL Engine)]
     end
 
-    subgraph BackendEngine["3. FastAPI Backend Core"]
-        DB --> ORM[SQLAlchemy ORM Models]
-        ORM --> Replay[Historical Deluge Replay Simulator]
-        ORM --> Scoring[Explainable Multi-Hazard Scoring Engine]
-        ORM --> FloodDepth[DEM Inundation Depth Heuristic]
+    subgraph ModelTeam["2. Prediction & Risk Modeling (Hari & Arya)"]
+        RawDir --> Preprocessing[Feature Engineering & Normalization]
+        Preprocessing --> MLModel[Multi-Hazard AI Prediction Model]
+        MLModel --> RiskScore[Explainable Risk Engine & Trust Scoring]
+        MLModel --> FloodModel[Flood Depth Estimation Model]
     end
 
-    subgraph APILayer["4. REST API Services"]
-        Scoring --> API_Alerts["/api/v1/alerts (Explainability & Trust)"]
-        Replay --> API_Replay["/api/v1/replay (Step / Reset / Status)"]
-        RawDir --> API_Raw["/api/v1/data/raw (Pandas / ML Access)"]
-        ORM --> API_Regions["/api/v1/regions (Spatial Hotspots)"]
+    subgraph Rudra_Backend["3. Database & FastAPI Backend Gateway (Rudra)"]
+        RiskScore --> IngestAPI["POST /api/v1/events & /api/v1/alerts"]
+        FloodModel --> IngestAPI
+        IngestAPI --> DB[(Database: SQLite / PostgreSQL)]
+        DB --> ORM[SQLAlchemy ORM: regions, features, risk_events, alerts]
+        ORM --> RestAPI["FastAPI REST Endpoints: /api/v1/alerts, /events, /regions, /data/raw"]
     end
 
-    subgraph Consumers["5. End-User Applications"]
-        API_Alerts --> Dash[Emergency Command Dashboard]
-        API_Raw --> ML[Prediction Model Team]
+    subgraph FrontendTeam["4. Command Dashboard (Srushti)"]
+        RestAPI --> MapView[Live Map & Risk Overlay]
+        RestAPI --> AlertFeed[Real-Time Alert Feed & Reasoning Breakdown]
     end
 ```
 
