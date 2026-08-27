@@ -52,6 +52,13 @@ def get_latest_feature_grid(
                 soil_moisture_pct=c["soil_moisture_pct"],
                 soil_saturation_factor=c.get("soil_saturation_factor", 0.5),
                 cape_instability_jkg=c["cape_instability_jkg"],
+                cloud_top_temp_celsius=c.get("cloud_top_temp_celsius", -45.0),
+                ctt_drop_rate_c_hr=c.get("ctt_drop_rate_c_hr", 0.0),
+                wind_speed_10m_kmh=c.get("wind_speed_10m_kmh", 20.0),
+                wind_direction_10m_deg=c.get("wind_direction_10m_deg", 240.0),
+                wind_u_ms=c.get("wind_u_ms", -5.0),
+                wind_v_ms=c.get("wind_v_ms", -3.0),
+                wind_gusts_kmh=c.get("wind_gusts_kmh", 30.0),
                 elevation_m=c["elevation_m"],
                 slope_deg=c["slope_deg"],
                 runoff_coefficient=c["runoff_coefficient"],
@@ -60,6 +67,11 @@ def get_latest_feature_grid(
                 is_depression_bowl=c["is_depression_bowl"],
                 tide_height_m=ts.get("tide_height_m", 2.5),
                 is_high_tide_locked=ts.get("is_high_tide_locked", False),
+                target_observed_flood_depth_cm=c.get("target_observed_flood_depth_cm", 0.0),
+                target_severity_class=c.get("target_severity_class", 0),
+                target_flash_flood_flag=c.get("target_flash_flood_flag", 0),
+                target_cloudburst_flag=c.get("target_cloudburst_flag", 0),
+                target_waterlogging_flag=c.get("target_waterlogging_flag", 0),
                 created_at=datetime.utcnow()
             )
         )
@@ -72,6 +84,7 @@ def get_latest_feature_grid(
         total_cells=len(cells_read),
         avg_rainfall_1h_mm=ts["avg_rainfall_1h_mm"],
         max_rainfall_1h_mm=ts["max_rainfall_1h_mm"],
+        avg_cloud_top_temp_celsius=ts.get("avg_cloud_top_temp_celsius", -45.0),
         tide_height_m=ts.get("tide_height_m", 2.5),
         is_high_tide_locked=ts.get("is_high_tide_locked", False),
         cells=cells_read

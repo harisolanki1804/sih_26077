@@ -31,6 +31,8 @@ logger = logging.getLogger("VARUNA.Seed")
 
 def seed():
     logger.info("Initializing database tables...")
+    from app.core.database import Base, engine
+    Base.metadata.drop_all(bind=engine)
     init_db()
     db = SessionLocal()
 
@@ -112,6 +114,13 @@ def seed():
                             soil_moisture_pct=cell["soil_moisture_pct"],
                             soil_saturation_factor=cell["soil_saturation_factor"],
                             cape_instability_jkg=cell["cape_instability_jkg"],
+                            cloud_top_temp_celsius=cell.get("cloud_top_temp_celsius", -45.0),
+                            ctt_drop_rate_c_hr=cell.get("ctt_drop_rate_c_hr", 0.0),
+                            wind_speed_10m_kmh=cell.get("wind_speed_10m_kmh", 20.0),
+                            wind_direction_10m_deg=cell.get("wind_direction_10m_deg", 240.0),
+                            wind_u_ms=cell.get("wind_u_ms", -5.0),
+                            wind_v_ms=cell.get("wind_v_ms", -3.0),
+                            wind_gusts_kmh=cell.get("wind_gusts_kmh", 30.0),
                             elevation_m=cell["elevation_m"],
                             slope_deg=cell["slope_deg"],
                             runoff_coefficient=cell["runoff_coefficient"],
@@ -119,7 +128,12 @@ def seed():
                             drainage_outfall_dist_m=cell["drainage_outfall_dist_m"],
                             is_depression_bowl=cell["is_depression_bowl"],
                             tide_height_m=initial_ts.get("tide_height_m", 2.5),
-                            is_high_tide_locked=initial_ts.get("is_high_tide_locked", False)
+                            is_high_tide_locked=initial_ts.get("is_high_tide_locked", False),
+                            target_observed_flood_depth_cm=cell.get("target_observed_flood_depth_cm", 0.0),
+                            target_severity_class=cell.get("target_severity_class", 0),
+                            target_flash_flood_flag=cell.get("target_flash_flood_flag", 0),
+                            target_cloudburst_flag=cell.get("target_cloudburst_flag", 0),
+                            target_waterlogging_flag=cell.get("target_waterlogging_flag", 0)
                         )
                     )
                 db.bulk_save_objects(feat_records)

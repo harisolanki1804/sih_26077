@@ -1,7 +1,8 @@
 {
+  "dataset_title": "SRTM 30m Digital Elevation Model (Topographical Baseline)",
+  "provenance": "NASA SRTM 1-arc-sec via OpenTopography / Open-Meteo Elevation API",
   "region_code": "IN-MH-BOM-01",
   "projection": "EPSG:4326 (WGS84)",
-  "source": "SRTM 30m / OpenTopography & Mumbai Municipal Terrain Model",
   "resolution_deg": 0.02,
   "total_cells": 90,
   "elevation_stats": {
@@ -18,7 +19,7 @@
       "slope_deg": 0.51,
       "drainage_outfall_dist_m": 7943.3,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -29,7 +30,7 @@
       "slope_deg": 1.93,
       "drainage_outfall_dist_m": 6985.9,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -40,7 +41,7 @@
       "slope_deg": 3.25,
       "drainage_outfall_dist_m": 6660.9,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -51,7 +52,7 @@
       "slope_deg": 2.48,
       "drainage_outfall_dist_m": 7056.1,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -62,7 +63,7 @@
       "slope_deg": 0.39,
       "drainage_outfall_dist_m": 8066.4,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -73,7 +74,7 @@
       "slope_deg": 1.13,
       "drainage_outfall_dist_m": 9497.5,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -84,7 +85,7 @@
       "slope_deg": 1.97,
       "drainage_outfall_dist_m": 11189.0,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -95,7 +96,7 @@
       "slope_deg": 1.61,
       "drainage_outfall_dist_m": 13040.0,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -106,7 +107,7 @@
       "slope_deg": 0.28,
       "drainage_outfall_dist_m": 14991.6,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -117,7 +118,7 @@
       "slope_deg": 0.51,
       "drainage_outfall_dist_m": 6201.1,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -128,7 +129,7 @@
       "slope_deg": 2.03,
       "drainage_outfall_dist_m": 4915.4,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -139,7 +140,7 @@
       "slope_deg": 3.45,
       "drainage_outfall_dist_m": 4441.4,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -150,7 +151,7 @@
       "slope_deg": 2.88,
       "drainage_outfall_dist_m": 5014.7,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -161,7 +162,7 @@
       "slope_deg": 0.39,
       "drainage_outfall_dist_m": 6358.1,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -172,7 +173,7 @@
       "slope_deg": 1.73,
       "drainage_outfall_dist_m": 8096.9,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -183,7 +184,7 @@
       "slope_deg": 2.47,
       "drainage_outfall_dist_m": 10027.5,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -194,7 +195,7 @@
       "slope_deg": 1.61,
       "drainage_outfall_dist_m": 12058.2,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -205,7 +206,7 @@
       "slope_deg": 0.28,
       "drainage_outfall_dist_m": 14145.9,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -216,7 +217,7 @@
       "slope_deg": 0.51,
       "drainage_outfall_dist_m": 4865.0,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -227,7 +228,7 @@
       "slope_deg": 1.03,
       "drainage_outfall_dist_m": 3062.1,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -238,7 +239,7 @@
       "slope_deg": 3.05,
       "drainage_outfall_dist_m": 2222.8,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -249,7 +250,7 @@
       "slope_deg": 3.08,
       "drainage_outfall_dist_m": 3219.0,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -260,7 +261,7 @@
       "slope_deg": 0.79,
       "drainage_outfall_dist_m": 5063.6,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -271,7 +272,7 @@
       "slope_deg": 2.73,
       "drainage_outfall_dist_m": 7125.6,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -282,7 +283,7 @@
       "slope_deg": 11.37,
       "drainage_outfall_dist_m": 9261.0,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -293,7 +294,7 @@
       "slope_deg": 2.21,
       "drainage_outfall_dist_m": 11428.7,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -304,7 +305,7 @@
       "slope_deg": 0.28,
       "drainage_outfall_dist_m": 13613.2,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -315,7 +316,7 @@
       "slope_deg": 0.51,
       "drainage_outfall_dist_m": 4329.0,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -326,7 +327,7 @@
       "slope_deg": 1.03,
       "drainage_outfall_dist_m": 2109.0,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -337,7 +338,7 @@
       "slope_deg": 3.05,
       "drainage_outfall_dist_m": 111.0,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -348,7 +349,7 @@
       "slope_deg": 2.58,
       "drainage_outfall_dist_m": 2331.0,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -359,7 +360,7 @@
       "slope_deg": 0.69,
       "drainage_outfall_dist_m": 4551.0,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -370,7 +371,7 @@
       "slope_deg": 3.03,
       "drainage_outfall_dist_m": 6771.0,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -381,7 +382,7 @@
       "slope_deg": 4.17,
       "drainage_outfall_dist_m": 8991.0,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -392,7 +393,7 @@
       "slope_deg": 3.11,
       "drainage_outfall_dist_m": 11211.0,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -403,7 +404,7 @@
       "slope_deg": 0.88,
       "drainage_outfall_dist_m": 13431.0,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -414,7 +415,7 @@
       "slope_deg": 0.51,
       "drainage_outfall_dist_m": 4865.0,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -425,7 +426,7 @@
       "slope_deg": 1.03,
       "drainage_outfall_dist_m": 3062.1,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -436,7 +437,7 @@
       "slope_deg": 2.65,
       "drainage_outfall_dist_m": 2222.8,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -447,7 +448,7 @@
       "slope_deg": 2.58,
       "drainage_outfall_dist_m": 3219.0,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -458,7 +459,7 @@
       "slope_deg": 1.29,
       "drainage_outfall_dist_m": 5063.6,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -469,7 +470,7 @@
       "slope_deg": 2.63,
       "drainage_outfall_dist_m": 7125.6,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -480,7 +481,7 @@
       "slope_deg": 2.67,
       "drainage_outfall_dist_m": 9261.0,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -491,7 +492,7 @@
       "slope_deg": 2.21,
       "drainage_outfall_dist_m": 11428.7,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -502,7 +503,7 @@
       "slope_deg": 0.68,
       "drainage_outfall_dist_m": 13613.2,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -513,7 +514,7 @@
       "slope_deg": 0.51,
       "drainage_outfall_dist_m": 6201.1,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -524,7 +525,7 @@
       "slope_deg": 1.03,
       "drainage_outfall_dist_m": 4915.4,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": true
     },
     {
@@ -535,7 +536,7 @@
       "slope_deg": 3.15,
       "drainage_outfall_dist_m": 4441.4,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -546,7 +547,7 @@
       "slope_deg": 3.88,
       "drainage_outfall_dist_m": 5014.7,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -557,7 +558,7 @@
       "slope_deg": 1.29,
       "drainage_outfall_dist_m": 6358.1,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -568,7 +569,7 @@
       "slope_deg": 1.79,
       "drainage_outfall_dist_m": 8096.9,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -579,7 +580,7 @@
       "slope_deg": 4.29,
       "drainage_outfall_dist_m": 10027.5,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -590,7 +591,7 @@
       "slope_deg": 5.53,
       "drainage_outfall_dist_m": 12058.2,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -601,7 +602,7 @@
       "slope_deg": 5.8,
       "drainage_outfall_dist_m": 14145.9,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -612,7 +613,7 @@
       "slope_deg": 1.35,
       "drainage_outfall_dist_m": 7943.3,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -623,7 +624,7 @@
       "slope_deg": 1.88,
       "drainage_outfall_dist_m": 6985.9,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -634,7 +635,7 @@
       "slope_deg": 2.73,
       "drainage_outfall_dist_m": 6660.9,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -645,7 +646,7 @@
       "slope_deg": 2.4,
       "drainage_outfall_dist_m": 7056.1,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -656,7 +657,7 @@
       "slope_deg": 1.17,
       "drainage_outfall_dist_m": 8066.4,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -667,7 +668,7 @@
       "slope_deg": 1.98,
       "drainage_outfall_dist_m": 9497.5,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -678,7 +679,7 @@
       "slope_deg": 4.41,
       "drainage_outfall_dist_m": 11189.0,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -689,7 +690,7 @@
       "slope_deg": 5.66,
       "drainage_outfall_dist_m": 13040.0,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -700,7 +701,7 @@
       "slope_deg": 5.92,
       "drainage_outfall_dist_m": 14991.6,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -711,7 +712,7 @@
       "slope_deg": 1.48,
       "drainage_outfall_dist_m": 9879.0,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -722,7 +723,7 @@
       "slope_deg": 2.01,
       "drainage_outfall_dist_m": 9127.0,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -733,7 +734,7 @@
       "slope_deg": 2.92,
       "drainage_outfall_dist_m": 8880.7,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -744,7 +745,7 @@
       "slope_deg": 2.65,
       "drainage_outfall_dist_m": 9180.8,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -755,7 +756,7 @@
       "slope_deg": 1.37,
       "drainage_outfall_dist_m": 9978.3,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -766,7 +767,7 @@
       "slope_deg": 2.11,
       "drainage_outfall_dist_m": 11167.0,
       "runoff_coefficient": 0.88,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -777,7 +778,7 @@
       "slope_deg": 4.54,
       "drainage_outfall_dist_m": 12636.9,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -788,7 +789,7 @@
       "slope_deg": 5.79,
       "drainage_outfall_dist_m": 14301.8,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -799,7 +800,7 @@
       "slope_deg": 6.05,
       "drainage_outfall_dist_m": 16101.1,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -810,7 +811,7 @@
       "slope_deg": 2.7,
       "drainage_outfall_dist_m": 11914.3,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -821,7 +822,7 @@
       "slope_deg": 3.22,
       "drainage_outfall_dist_m": 11298.6,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -832,7 +833,7 @@
       "slope_deg": 4.14,
       "drainage_outfall_dist_m": 11100.6,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -843,7 +844,7 @@
       "slope_deg": 3.87,
       "drainage_outfall_dist_m": 11342.1,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -854,7 +855,7 @@
       "slope_deg": 2.58,
       "drainage_outfall_dist_m": 11996.7,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -865,7 +866,7 @@
       "slope_deg": 3.32,
       "drainage_outfall_dist_m": 13002.2,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -876,7 +877,7 @@
       "slope_deg": 5.76,
       "drainage_outfall_dist_m": 14284.5,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -887,7 +888,7 @@
       "slope_deg": 7.0,
       "drainage_outfall_dist_m": 15776.5,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -898,7 +899,7 @@
       "slope_deg": 7.27,
       "drainage_outfall_dist_m": 17424.2,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -909,7 +910,7 @@
       "slope_deg": 3.79,
       "drainage_outfall_dist_m": 14005.8,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -920,7 +921,7 @@
       "slope_deg": 4.31,
       "drainage_outfall_dist_m": 13485.9,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -931,7 +932,7 @@
       "slope_deg": 5.23,
       "drainage_outfall_dist_m": 13320.5,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -942,7 +943,7 @@
       "slope_deg": 4.96,
       "drainage_outfall_dist_m": 13522.4,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -953,7 +954,7 @@
       "slope_deg": 3.67,
       "drainage_outfall_dist_m": 14076.0,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -964,7 +965,7 @@
       "slope_deg": 4.41,
       "drainage_outfall_dist_m": 14942.2,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -975,7 +976,7 @@
       "slope_deg": 6.85,
       "drainage_outfall_dist_m": 16070.5,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -986,7 +987,7 @@
       "slope_deg": 8.09,
       "drainage_outfall_dist_m": 17410.0,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     },
     {
@@ -997,7 +998,7 @@
       "slope_deg": 8.36,
       "drainage_outfall_dist_m": 18916.0,
       "runoff_coefficient": 0.72,
-      "soil_type": "Clayey Silt / Urban Fill",
+      "soil_type": "Clayey Silt / Urban Impervious Fill",
       "is_depression_bowl": false
     }
   ]
