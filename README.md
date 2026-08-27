@@ -1,6 +1,5 @@
 # Project VARUNA — ML Team Data & API Guide
 
-This repository provides the spatial datasets, historical storm data, and backend APIs for the **Model Development Team (Hari & Arya)**.
 
 ---
 
