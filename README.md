@@ -136,21 +136,37 @@ erDiagram
 
 ---
 
-## 🔬 Raw Data Access for Prediction Model Team
+## ⏱️ Dataset Timestamps & Temporal Coverage
 
-All raw datasets are stored **untouched without preprocessing** under `VARUNA/data/raw/`:
+The provided datasets capture a real **72-hour extreme monsoon deluge event** over the Mumbai pilot region with exact hourly timestamps:
 
-```python
-import pandas as pd
+### 1. Raw Meteorological & Rainfall Series (`data/raw/rainfall/mumbai_hourly_rainfall_raw.csv`)
+* **Start Timestamp**: `2023-07-25T00:00:00Z` (00:00 UTC / 05:30 IST)
+* **End Timestamp**: `2023-07-27T23:00:00Z` (23:00 UTC / 04:30 IST next day)
+* **Temporal Interval**: **1-hour ($1\text{h}$) steps** (72 continuous hourly records)
+* **Timezone**: **UTC (ISO 8601)** formatted as `YYYY-MM-DDTHH:MM`
+* **Parameters Recorded per Hour**:
+  * `timestamp` — Hourly datetime (UTC)
+  * `precipitation_mm` — Hourly rainfall intensity (mm/hr)
+  * `temperature_c` — 2m Air temperature (°C)
+  * `relative_humidity_pct` — Relative humidity (%)
+  * `surface_pressure_hpa` — Barometric surface pressure (hPa)
+  * `soil_moisture_0_to_7cm_m3m3` — Volumetric surface soil water ($m^3/m^3$)
 
-# 1. Load raw DEM topography elevation points
-df_dem = pd.read_csv('data/raw/dem/mumbai_srtm_dem_raw.csv')
-# Columns: cell_id, latitude, longitude, elevation_meters
+### 2. Historical Storm Replay Timeline (`data/feature_grid_timeseries.json`)
+The spatio-temporal replay simulator maps the storm across 5 operational phases across 72 timesteps ($T_1 \to T_{72}$):
 
-# 2. Load raw historical rainfall and meteorological series
-df_rain = pd.read_csv('data/raw/rainfall/mumbai_hourly_rainfall_raw.csv')
-# Columns: timestamp, precipitation_mm, temperature_c, relative_humidity_pct, surface_pressure_hpa, soil_moisture_0_to_7cm_m3m3
-```
+| Timestep Range | Timestamp (UTC) | Meteorological Storm Phase | Regional Avg Rain Rate | High Tide Lock |
+|---|---|---|---|---|
+| **$T_1 - T_{18}$** | `2024-07-26T00:00Z` – `17:00Z` | **Pre-Event Baseline**: Overcast skies, light drizzle | $0.5 - 4.0\text{ mm/hr}$ | Normal ($2.1\text{m}$) |
+| **$T_{19} - T_{30}$** | `2024-07-26T18:00Z` – `2024-07-27T05:00Z` | **Squall Line Inflow**: Rapid moisture convergence | $15.0 - 35.0\text{ mm/hr}$ | Rising ($3.6\text{m}$) |
+| **$T_{31} - T_{42}$** | `2024-07-27T06:00Z` – `17:00Z` | **Severe Cloudburst Peak**: Critical waterlogging (Peak at $T_{36}$) | **$60.0 - 125.0\text{ mm/hr}$** | **LOCKED ($4.8\text{m}$ surge)** |
+| **$T_{43} - T_{54}$** | `2024-07-27T18:00Z` – `2024-07-28T05:00Z` | **Sustained Downpour**: High surface runoff saturation | $25.0 - 45.0\text{ mm/hr}$ | Receding |
+| **$T_{55} - T_{72}$** | `2024-07-28T06:00Z` – `23:00Z` | **Recession & Drainage**: Sump de-watering phase | $1.0 - 15.0\text{ mm/hr}$ | Cleared ($1.8\text{m}$) |
+
+### 3. Static Topography Baseline (`data/raw/dem/mumbai_srtm_dem_raw.csv`)
+* **Spatial Resolution**: 30-meter ground elevation (NASA SRTM 1-arc-second)
+* **Temporal Status**: Static terrain elevation reference ($90$ spatial coordinates)
 
 ---
 
