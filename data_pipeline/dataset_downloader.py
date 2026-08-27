@@ -122,21 +122,34 @@ def fetch_or_build_srtm_dem(meta: Dict[str, Any]) -> Dict[str, Any]:
     return dem_output
 
 
-def generate_historical_deluge_rainfall(meta: Dict[str, Any], dem_data: Dict[str, Any]) -> Dict[str, Any]:
+from datetime import datetime, timedelta
+
+def generate_historical_deluge_rainfall(
+    meta: Dict[str, Any],
+    dem_data: Dict[str, Any],
+    start_date: str = "2024-07-26",
+    end_date: str = "2024-07-28"
+) -> Dict[str, Any]:
     """
-    Generates synchronized 72-hour historical extreme heavy-rainfall deluge dataset
-    with complete Kinematics (wind u/v, gusts), Instability (CAPE, CTT), and Supervised Target Labels.
-    Window: 2024-07-26T00:00:00Z to 2024-07-28T23:00:00Z.
+    Generates synchronized historical extreme heavy-rainfall deluge dataset
+    with complete Kinematics (wind u/v, gusts), Instability (CAPE, CTT), and Supervised Target Labels
+    across any dynamic date window (start_date to end_date).
     """
-    logger.info("Generating 72-hour historical deluge rainfall & atmospheric time-series (2024-07-26 to 2024-07-28)...")
+    start_dt = datetime.fromisoformat(f"{start_date}T00:00:00+00:00")
+    end_dt = datetime.fromisoformat(f"{end_date}T23:00:00+00:00")
+    total_hours = int((end_dt - start_dt).total_seconds() // 3600) + 1
+
+    logger.info(f"Generating {total_hours}-hour historical deluge rainfall & atmospheric time-series ({start_date} to {end_date})...")
     
     cells = dem_data["cells"]
     timesteps = []
 
-    for h in range(1, 73):
-        day = 26 + (h - 1) // 24
-        hour_of_day = (h - 1) % 24
-        timestamp_str = f"2024-07-{day:02d}T{hour_of_day:02d}:00:00Z"
+    for h in range(1, total_hours + 1):
+        cur_dt = start_dt + timedelta(hours=h - 1)
+        timestamp_str = cur_dt.strftime("%Y-%m-%dT%H:00:00Z")
+        hour_of_day = cur_dt.hour
+        # Normalized progression [0.0 to 1.0] across time window
+        norm_t = (h - 1) / max(1.0, float(total_hours - 1))
 
         # Event progression
         if h <= 18:
@@ -342,10 +355,21 @@ def generate_satellite_moisture_proxy(meta: Dict[str, Any], rainfall_data: Dict[
 
 
 def main():
-    logger.info("Starting VARUNA dataset downloader & generation pipeline...")
+    import argparse
+    parser = argparse.ArgumentParser(description="VARUNA Calibrated Dataset Downloader & Generator")
+    parser.add_argument("--start-date", type=str, default="2024-07-26", help="Start date (YYYY-MM-DD), e.g. 2024-06-01")
+    parser.add_argument("--end-date", type=str, default="2024-07-28", help="End date (YYYY-MM-DD), e.g. 2024-09-30")
+    args = parser.parse_args()
+
+    logger.info(f"Starting VARUNA dataset downloader & generation pipeline ({args.start_date} to {args.end_date})...")
     meta = load_metadata()
     dem_data = fetch_or_build_srtm_dem(meta)
-    rainfall_data = generate_historical_deluge_rainfall(meta, dem_data)
+    rainfall_data = generate_historical_deluge_rainfall(
+        meta=meta,
+        dem_data=dem_data,
+        start_date=args.start_date,
+        end_date=args.end_date
+    )
     generate_satellite_moisture_proxy(meta, rainfall_data)
     logger.info("Data pipeline dataset preparation completed successfully.")
 

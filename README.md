@@ -102,6 +102,26 @@ df_moist = pd.read_csv('data/raw/moisture/mumbai_soil_moisture_raw.csv')
 
 ---
 
+## 🌐 Dynamic Data Sourcing for Any Duration
+
+The pipeline allows fetching historical meteorological & soil moisture data for **any custom date range** (months, full monsoon seasons, or multiple years):
+
+### CLI Dynamic Download
+```bash
+# Fetch full monsoon season (June to September 2024)
+python data_pipeline/raw_dataset_downloader.py --start-date 2024-06-01 --end-date 2024-09-30 --save-custom-named
+
+# Or generate calibrated multi-day grid dataset
+python data_pipeline/dataset_downloader.py --start-date 2024-07-01 --end-date 2024-07-31
+```
+
+### Live Dynamic Query Endpoint
+```http
+GET /api/v1/data/raw/fetch-dynamic?start_date=2024-06-01&end_date=2024-09-30&latitude=19.07&longitude=72.88
+```
+
+---
+
 ## 🔌 Sending Model Predictions to Backend API
 
 Once your model predicts risks/depths, push them to the backend using these endpoints:

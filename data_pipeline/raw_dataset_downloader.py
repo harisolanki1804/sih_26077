@@ -84,24 +84,34 @@ def download_raw_dem() -> Dict[str, Any]:
     return raw_dem_payload
 
 
-def download_raw_historical_rainfall_and_weather() -> Dict[str, Any]:
+def download_raw_historical_rainfall_and_weather(
+    start_date: str = "2024-07-26",
+    end_date: str = "2024-07-28",
+    lat: float = 19.07,
+    lon: float = 72.88,
+    save_custom_named: bool = False
+) -> Dict[str, Any]:
     """
     Fetches raw hourly meteorological, precipitation, wind kinematics, and soil moisture reanalysis
-    from ECMWF ERA5-Land for the synchronized historical window 2024-07-26 to 2024-07-28.
+    from ECMWF ERA5-Land for any given historical window (start_date to end_date) and coordinates.
     """
-    logger.info("Downloading raw historical rainfall & weather time series (2024-07-26 to 2024-07-28)...")
+    logger.info(f"Downloading raw historical rainfall & weather time series ({start_date} to {end_date}) at ({lat}, {lon})...")
     url = (
-        "https://archive-api.open-meteo.com/v1/archive?"
-        "latitude=19.07&longitude=72.88&start_date=2024-07-26&end_date=2024-07-28&"
-        "hourly=precipitation,temperature_2m,relative_humidity_2m,surface_pressure,"
-        "wind_speed_10m,wind_direction_10m,wind_gusts_10m,soil_moisture_0_to_7cm,soil_moisture_7_to_28cm"
+        f"https://archive-api.open-meteo.com/v1/archive?"
+        f"latitude={lat}&longitude={lon}&start_date={start_date}&end_date={end_date}&"
+        f"hourly=precipitation,temperature_2m,relative_humidity_2m,surface_pressure,"
+        f"wind_speed_10m,wind_direction_10m,wind_gusts_10m,soil_moisture_0_to_7cm,soil_moisture_7_to_28cm"
     )
     req = urllib.request.Request(url, headers={"User-Agent": "VARUNA-RawIngest/1.0"})
-    with urllib.request.urlopen(req, timeout=15) as resp:
+    with urllib.request.urlopen(req, timeout=25) as resp:
         raw_data = json.loads(resp.read().decode("utf-8"))
 
+    # File suffix if custom range
+    suffix = f"_{start_date}_to_{end_date}" if save_custom_named else ""
+
     # 1. Save Raw JSON Archive
-    json_path = os.path.join(RAW_RAIN_DIR, "mumbai_hourly_rainfall_raw.json")
+    json_filename = f"mumbai_hourly_rainfall_raw{suffix}.json"
+    json_path = os.path.join(RAW_RAIN_DIR, json_filename)
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(raw_data, f, indent=2)
 
@@ -118,7 +128,8 @@ def download_raw_historical_rainfall_and_weather() -> Dict[str, Any]:
     soil_7_28 = hourly.get("soil_moisture_7_to_28cm", [])
 
     # 2. Save Raw Rainfall & Weather CSV
-    csv_path = os.path.join(RAW_RAIN_DIR, "mumbai_hourly_rainfall_raw.csv")
+    csv_filename = f"mumbai_hourly_rainfall_raw{suffix}.csv"
+    csv_path = os.path.join(RAW_RAIN_DIR, csv_filename)
     with open(csv_path, "w", encoding="utf-8") as f:
         f.write("timestamp,precipitation_mm,temperature_c,relative_humidity_pct,surface_pressure_hpa,wind_speed_10m_kmh,wind_direction_10m_deg,wind_gusts_10m_kmh,soil_moisture_0_to_7cm_m3m3\n")
         for i in range(len(times)):
@@ -134,8 +145,9 @@ def download_raw_historical_rainfall_and_weather() -> Dict[str, Any]:
                 f"{soil_0_7[i] if i < len(soil_0_7) else 0.0}\n"
             )
 
-    # 3. Save Raw Soil Moisture & Multi-Layer Saturation (Fixes Issue #5)
-    moist_csv_path = os.path.join(RAW_MOIST_DIR, "mumbai_soil_moisture_raw.csv")
+    # 3. Save Raw Soil Moisture & Multi-Layer Saturation
+    moist_csv_filename = f"mumbai_soil_moisture_raw{suffix}.csv"
+    moist_csv_path = os.path.join(RAW_MOIST_DIR, moist_csv_filename)
     with open(moist_csv_path, "w", encoding="utf-8") as f:
         f.write("timestamp,soil_moisture_0_to_7cm_m3m3,soil_moisture_7_to_28cm_m3m3,surface_pressure_hpa,relative_humidity_pct\n")
         for i in range(len(times)):
@@ -147,17 +159,19 @@ def download_raw_historical_rainfall_and_weather() -> Dict[str, Any]:
                 f"{rh[i] if i < len(rh) else 0.0}\n"
             )
 
-    moist_json_path = os.path.join(RAW_MOIST_DIR, "mumbai_soil_moisture_raw.json")
+    moist_json_filename = f"mumbai_soil_moisture_raw{suffix}.json"
+    moist_json_path = os.path.join(RAW_MOIST_DIR, moist_json_filename)
     with open(moist_json_path, "w", encoding="utf-8") as f:
         json.dump({
             "source": "ECMWF ERA5-Land Reanalysis (Surface & Sub-surface Soil Water)",
             "region": "Mumbai Pilot",
+            "coordinates": {"latitude": lat, "longitude": lon},
             "time_window": {"start": times[0] if times else "", "end": times[-1] if times else ""},
             "records_count": len(times),
             "layers": ["0_to_7cm_volumetric", "7_to_28cm_volumetric"]
         }, f, indent=2)
 
-    logger.info(f"Saved raw meteorological & rainfall dataset to {json_path} and {csv_path}")
+    logger.info(f"Saved raw meteorological & rainfall dataset ({len(times)} records) to {json_path} and {csv_path}")
     logger.info(f"Saved raw multi-layer soil moisture dataset to {moist_csv_path} and {moist_json_path}")
     return raw_data
 
@@ -184,11 +198,26 @@ def download_raw_pilot_metadata():
 
 
 def main():
-    logger.info("Starting pure raw dataset ingestion (NO PREPROCESSING)...")
+    import argparse
+    parser = argparse.ArgumentParser(description="VARUNA Dynamic Raw Dataset Downloader")
+    parser.add_argument("--start-date", type=str, default="2024-07-26", help="Start date (YYYY-MM-DD), e.g. 2024-06-01")
+    parser.add_argument("--end-date", type=str, default="2024-07-28", help="End date (YYYY-MM-DD), e.g. 2024-09-30")
+    parser.add_argument("--lat", type=float, default=19.07, help="Latitude center coordinate (default: 19.07 for Mumbai)")
+    parser.add_argument("--lon", type=float, default=72.88, help="Longitude center coordinate (default: 72.88 for Mumbai)")
+    parser.add_argument("--save-custom-named", action="store_true", help="Save files with date suffix instead of default benchmark names")
+    args = parser.parse_args()
+
+    logger.info(f"Starting raw dataset ingestion for period: {args.start_date} to {args.end_date}...")
     download_raw_pilot_metadata()
     download_raw_dem()
-    download_raw_historical_rainfall_and_weather()
-    logger.info("Raw dataset ingestion completed. Synced across 2024-07-26 to 2024-07-28.")
+    download_raw_historical_rainfall_and_weather(
+        start_date=args.start_date,
+        end_date=args.end_date,
+        lat=args.lat,
+        lon=args.lon,
+        save_custom_named=args.save_custom_named
+    )
+    logger.info(f"Raw dataset ingestion completed successfully for {args.start_date} to {args.end_date}.")
 
 
 if __name__ == "__main__":
