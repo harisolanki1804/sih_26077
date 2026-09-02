@@ -37,6 +37,18 @@ class Settings(BaseSettings):
     DEFAULT_REGION_CODE: str = "IN-MH-BOM-01"
     DEFAULT_EVENT_CODE: str = "EVT-BOM-20240726-DELUGE"
 
+    # MOSDAC Satellite Data API (username/password only, no API key)
+    MOSDAC_USERNAME: str = os.getenv("MOSDAC_USERNAME", "")
+    MOSDAC_PASSWORD: str = os.getenv("MOSDAC_PASSWORD", "")
+
+    # Offline GenAI (Ollama) — leave empty to use the built-in rule-based chatbot
+    OLLAMA_URL: str = os.getenv("OLLAMA_URL", "http://localhost:11434")
+    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "phi3:mini")
+
+    # Alert Webhook Dispatch — leave empty to disable
+    ALERT_WEBHOOK_URL: str = os.getenv("ALERT_WEBHOOK_URL", "")
+    ALERT_WEBHOOK_SECRET: str = os.getenv("ALERT_WEBHOOK_SECRET", "")
+
     class Config:
         case_sensitive = True
         env_file = ".env"

@@ -35,21 +35,20 @@ class RiskModelService:
         """
 
         # 1. Rainfall Score Contribution (Max 40.0)
-        # 1h rain intensity up to 75mm/hr gives up to 25 pts
-        score_1h = min(25.0, (rain_1h / 75.0) * 25.0)
-        # 3h and 24h cumulative loading gives up to 15 pts
-        score_accum = min(15.0, (rain_3h / 150.0) * 10.0 + (rain_24h / 300.0) * 5.0)
+        # S-curve scaling so extreme events still show differentiation
+        # 50mm/hr = moderate, 100mm/hr = high, 200mm/hr = extreme
+        r1h_norm = min(1.0, rain_1h / 200.0)
+        score_1h = 25.0 * (1.0 - (1.0 - r1h_norm) ** 1.5)
+        # 3h and 24h cumulative loading
+        r3h_norm = min(1.0, rain_3h / 500.0)
+        r24h_norm = min(1.0, rain_24h / 800.0)
+        score_accum = 10.0 * r3h_norm + 5.0 * r24h_norm
         rainfall_score = round(min(40.0, score_1h + score_accum), 2)
 
         # 2. Soil Saturation Contribution (Max 25.0)
-        # Saturation above 50% ramps up runoff generation exponentially
-        if soil_moist_pct <= 40.0:
-            soil_score = (soil_moist_pct / 40.0) * 5.0
-        elif soil_moist_pct <= 75.0:
-            soil_score = 5.0 + ((soil_moist_pct - 40.0) / 35.0) * 10.0
-        else:
-            soil_score = 15.0 + ((soil_moist_pct - 75.0) / 25.0) * 10.0
-        soil_score = round(min(25.0, max(0.0, soil_score)), 2)
+        # S-curve: 30% = low, 60% = moderate, 90% = saturated
+        s_norm = min(1.0, max(0.0, soil_moist_pct) / 100.0)
+        soil_score = round(min(25.0, 25.0 * (s_norm ** 1.8)), 2)
 
         # 3. Topography & DEM Depression Contribution (Max 20.0)
         # Low elevations (< 5.0m) and flat slopes (< 1.0 deg) in urban bowls
@@ -59,14 +58,9 @@ class RiskModelService:
         topo_score = round(min(20.0, elev_penalty + slope_penalty + depression_penalty), 2)
 
         # 4. Atmospheric Instability (CAPE) Contribution (Max 15.0)
-        # CAPE > 2500 J/kg indicates violent updrafts & cloudburst potential
-        if cape_jkg < 1000:
-            instab_score = (cape_jkg / 1000.0) * 3.0
-        elif cape_jkg < 2500:
-            instab_score = 3.0 + ((cape_jkg - 1000.0) / 1500.0) * 7.0
-        else:
-            instab_score = 10.0 + min(5.0, ((cape_jkg - 2500.0) / 1500.0) * 5.0)
-        instab_score = round(min(15.0, max(0.0, instab_score)), 2)
+        # S-curve: 500 = low, 1500 = moderate, 3000 = extreme
+        c_norm = min(1.0, max(0.0, cape_jkg) / 3500.0)
+        instab_score = round(min(15.0, 15.0 * (c_norm ** 1.3)), 2)
 
         # Total Additive Risk Score
         total_risk = round(min(100.0, rainfall_score + soil_score + topo_score + instab_score), 1)

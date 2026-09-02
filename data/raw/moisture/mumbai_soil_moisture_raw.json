@@ -11,7 +11,15 @@
   },
   "records_count": 72,
   "layers": [
-    "0_to_7cm_volumetric",
-    "7_to_28cm_volumetric"
+    {
+      "name": "soil_moisture_0_to_7cm",
+      "unit": "m\u00b3/m\u00b3",
+      "description": "Surface soil moisture"
+    },
+    {
+      "name": "soil_moisture_7_to_28cm",
+      "unit": "m\u00b3/m\u00b3",
+      "description": "Root zone soil moisture"
+    }
   ]
 }

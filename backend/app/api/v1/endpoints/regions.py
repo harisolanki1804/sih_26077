@@ -51,3 +51,90 @@ def create_region(payload: RegionCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(region)
     return region
+
+
+@router.get("/roadmap", summary="🗺️ All-India State Selector — Live vs Roadmap Status")
+def get_state_roadmap():
+    """
+    Returns all major Indian states with their VARUNA deployment status.
+
+    - status=live : Mumbai pilot fully operational
+    - status=roadmap : Planned for future phases — no data shown
+
+    Used by the frontend state/city selector to show the "Roadmap" badge
+    on non-operational states, so the dashboard never shows placeholder data.
+    """
+    states = [
+        # ── Live Pilot ────────────────────────────────────────────────
+        {
+            "code": "IN-MH-BOM-01", "state": "Maharashtra", "city": "Mumbai",
+            "status": "live", "pilot_since": "2024",
+            "grid_cells": 90, "resolution_km": 2,
+            "center_lat": 19.08, "center_lon": 72.88,
+            "note": "Full 90-cell Digital Twin — Mumbai Pilot Zone",
+        },
+        # ── Phase 2 Roadmap ───────────────────────────────────────────
+        {
+            "code": "IN-MH-PUN-01", "state": "Maharashtra", "city": "Pune",
+            "status": "roadmap", "available_from": "Phase 2",
+            "center_lat": 18.52, "center_lon": 73.86,
+            "note": "Planned — Mula-Mutha river basin pilot",
+        },
+        {
+            "code": "IN-KA-BLR-01", "state": "Karnataka", "city": "Bengaluru",
+            "status": "roadmap", "available_from": "Phase 2",
+            "center_lat": 12.97, "center_lon": 77.59,
+            "note": "Planned — urban lake overflow pilot",
+        },
+        {
+            "code": "IN-TN-CHN-01", "state": "Tamil Nadu", "city": "Chennai",
+            "status": "roadmap", "available_from": "Phase 2",
+            "center_lat": 13.08, "center_lon": 80.27,
+            "note": "Planned — Adyar & Cooum river basin pilot",
+        },
+        {
+            "code": "IN-WB-KOL-01", "state": "West Bengal", "city": "Kolkata",
+            "status": "roadmap", "available_from": "Phase 3",
+            "center_lat": 22.57, "center_lon": 88.36,
+            "note": "Planned — Hooghly tidal flood zone pilot",
+        },
+        {
+            "code": "IN-GJ-AHM-01", "state": "Gujarat", "city": "Ahmedabad",
+            "status": "roadmap", "available_from": "Phase 3",
+            "center_lat": 23.03, "center_lon": 72.58,
+            "note": "Planned — Sabarmati river flood pilot",
+        },
+        {
+            "code": "IN-OD-BHU-01", "state": "Odisha", "city": "Bhubaneswar",
+            "status": "roadmap", "available_from": "Phase 3",
+            "center_lat": 20.30, "center_lon": 85.84,
+            "note": "Planned — cyclone + coastal flood pilot",
+        },
+        {
+            "code": "IN-AS-GHY-01", "state": "Assam", "city": "Guwahati",
+            "status": "roadmap", "available_from": "Phase 3",
+            "center_lat": 26.14, "center_lon": 91.74,
+            "note": "Planned — Brahmaputra basin flood pilot",
+        },
+        {
+            "code": "IN-HP-SML-01", "state": "Himachal Pradesh", "city": "Shimla",
+            "status": "roadmap", "available_from": "Phase 4",
+            "center_lat": 31.10, "center_lon": 77.17,
+            "note": "Planned — cloudburst & landslide pilot",
+        },
+        {
+            "code": "IN-UK-DRD-01", "state": "Uttarakhand", "city": "Dehradun",
+            "status": "roadmap", "available_from": "Phase 4",
+            "center_lat": 30.32, "center_lon": 78.03,
+            "note": "Planned — Himalayan flash-flood pilot",
+        },
+    ]
+    live_count = sum(1 for s in states if s["status"] == "live")
+    roadmap_count = sum(1 for s in states if s["status"] == "roadmap")
+    return {
+        "total_states": len(states),
+        "live": live_count,
+        "roadmap": roadmap_count,
+        "states": states,
+    }
+

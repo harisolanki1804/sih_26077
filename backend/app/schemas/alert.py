@@ -23,6 +23,9 @@ class TrustMetrics(BaseModel):
 class AlertBase(BaseModel):
     cell_lat: float
     cell_lon: float
+    cell_id: Optional[str] = None
+    locality_name: Optional[str] = None
+    timestep: Optional[int] = None
     timestamp: datetime
     alert_type: str = "FLASH_FLOOD"
     severity: str = "HIGH"
@@ -54,7 +57,7 @@ class AlertRead(AlertBase):
     acknowledged_by: Optional[str] = None
     created_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, extra='ignore')
 
 
 class AlertDetailExplanation(BaseModel):

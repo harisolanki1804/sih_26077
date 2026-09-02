@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Boolean, JSON, Text, Index
+from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey, Boolean, JSON, Text, Index
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -14,6 +14,9 @@ class Alert(Base):
 
     cell_lat = Column(Float, nullable=False)
     cell_lon = Column(Float, nullable=False)
+    cell_id = Column(String(10), nullable=True)  # e.g. "C36"
+    locality_name = Column(String(100), nullable=True)  # e.g. "Andheri West"
+    timestep = Column(Integer, nullable=True)  # replay timestep
     timestamp = Column(DateTime, index=True, nullable=False)
 
     alert_type = Column(String(50), default="FLASH_FLOOD")  # FLASH_FLOOD, WATERLOGGING, CLOUDBURST, TIDAL_LOCK

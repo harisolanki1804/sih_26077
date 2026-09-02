@@ -31,6 +31,7 @@ class ReplayStepResponse(BaseModel):
     new_alerts_count: int
     active_event: Optional[RiskEventRead] = None
     alerts_generated: List[AlertRead] = []
+    ai_pipeline_results: Optional[Dict[str, Any]] = None
     summary_message: str
 
 

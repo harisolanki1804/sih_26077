@@ -13,6 +13,25 @@ from app.schemas.feature import FeatureRead, FeatureGridSnapshot
 router = APIRouter()
 
 
+def parse_iso_timestamp(ts_str: str) -> datetime:
+    """Parse ISO timestamp string safely, handling synthetic hour overflow (e.g. 2024-07-26T36:00:00Z)."""
+    clean_str = ts_str.replace("Z", "+00:00")
+    try:
+        return datetime.fromisoformat(clean_str)
+    except ValueError:
+        import re
+        from datetime import timedelta
+        match = re.match(r"(\d{4}-\d{2}-\d{2})T(\d+):(\d{2}):(\d{2})(.*)", clean_str)
+        if match:
+            date_part, hours_str, mins_str, secs_str, tz_part = match.groups()
+            total_hours = int(hours_str)
+            days_add = total_hours // 24
+            rem_hours = total_hours % 24
+            base_dt = datetime.fromisoformat(f"{date_part}T{str(rem_hours).zfill(2)}:{mins_str}:{secs_str}{tz_part}")
+            return base_dt + timedelta(days=days_add)
+        return datetime.utcnow()
+
+
 @router.get("/latest", response_model=FeatureGridSnapshot, summary="Get Latest Feature Grid Snapshot")
 def get_latest_feature_grid(
     region_code: Optional[str] = Query(default=settings.DEFAULT_REGION_CODE),
@@ -41,7 +60,7 @@ def get_latest_feature_grid(
             FeatureRead(
                 id=f"feat-cell-{c['cell_index']}",
                 region_id=region.id if region else "default",
-                timestamp=datetime.fromisoformat(ts["timestamp"].replace("Z", "+00:00")),
+                timestamp=parse_iso_timestamp(ts["timestamp"]),
                 cell_index=c["cell_index"],
                 cell_lat=c["lat"],
                 cell_lon=c["lon"],

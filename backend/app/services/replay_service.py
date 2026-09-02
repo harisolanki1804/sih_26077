@@ -20,8 +20,57 @@ from app.models.risk_event import RiskEvent, SeverityLevel, EventStatus
 from app.models.alert import Alert
 from app.services.risk_model import risk_model_service
 from app.services.explainability import explainability_service
+from app.services.ai import get_inference_engine
+from app.services.alert_dispatch import dispatch_alert
 
 logger = logging.getLogger("VARUNA.ReplayEngine")
+
+# Grid bounds matching frontend
+LAT_MIN, LAT_MAX = 18.88, 19.26
+LON_MIN, LON_MAX = 72.78, 73.00
+ROWS, COLS = 10, 9
+LOCALITY = [
+  ['Sea','Colaba','Fort','Churchgate','Marine Drive','Nariman Point','Malabar Hill','Walkeshwar','Haji Ali'],
+  ['Sea','Grant Road','Tardeo','Bhuleshwar','Girgaon','Parel','Mahalaxmi','Byculla','Mazgaon'],
+  ['Sea','Mumbai Central','Worli','Matunga','Sion','Wadala','Sewri','Chinchpokli','Reay Road'],
+  ['Mahim','Dadar West','Dadar East','Kurla','Vidyavihar','Ghatkopar','BKC','Kalina','Santacruz'],
+  ['Sea','Bandra','Bandra West','Khar','Chembur','Powai','Hiranandani','Chembur East','Navi Mumbai'],
+  ['Juhu Beach','Juhu','Versova','Lokhandwala','Saki Naka','Ghatkopar E','Vikhroli','Kanjurmarg','Nahur'],
+  ['Amboli','Jogeshwari','Andheri West','Andheri East','Marol','Powai Lake','Chandivali','Bhandup','Mulund'],
+  ['Malvani','Malad West','Goregaon','Kandivali','Borivali','Deonar','Govandi','Mulund East','Thane Creek'],
+  ['Erangal','Kandivali West','Borivali West','Dahisar','Mira Road','Thane West','Wagle Estate','Thane','Kopar Khairane'],
+  ['Madh Island','Marve','Manori','Vasai','Nallasopara','Vashi','Sanpada','Nerul','Belapur'],
+]
+
+def parse_iso_timestamp(ts_str: str) -> datetime:
+    """Parse ISO timestamp string safely, handling synthetic hour overflow (e.g. 2024-07-26T36:00:00Z)."""
+    clean_str = ts_str.replace("Z", "+00:00")
+    try:
+        return datetime.fromisoformat(clean_str)
+    except ValueError:
+        import re
+        from datetime import timedelta
+        match = re.match(r"(\d{4}-\d{2}-\d{2})T(\d+):(\d{2}):(\d{2})(.*)", clean_str)
+        if match:
+            date_part, hours_str, mins_str, secs_str, tz_part = match.groups()
+            total_hours = int(hours_str)
+            days_add = total_hours // 24
+            rem_hours = total_hours % 24
+            base_dt = datetime.fromisoformat(f"{date_part}T{str(rem_hours).zfill(2)}:{mins_str}:{secs_str}{tz_part}")
+            return base_dt + timedelta(days=days_add)
+        return datetime.utcnow()
+
+
+def _latlon_to_cell(lat: float, lon: float) -> tuple:
+    """Convert lat/lon to (cell_id, locality_name)."""
+    r = int((lat - LAT_MIN) / (LAT_MAX - LAT_MIN) * ROWS)
+    c = int((lon - LON_MIN) / (LON_MAX - LON_MIN) * COLS)
+    r = max(0, min(ROWS - 1, r))
+    c = max(0, min(COLS - 1, c))
+    idx = r * COLS + c
+    cell_id = f"C{str(idx + 1).zfill(2)}"
+    name = LOCALITY[r][c]
+    return cell_id, name
 
 
 class ReplaySimulationEngine:
@@ -121,7 +170,7 @@ class ReplaySimulationEngine:
         # Lookup or create RiskEvent
         event_code = self.data_cache.get("event_code", settings.DEFAULT_EVENT_CODE)
         event = db.query(RiskEvent).filter(RiskEvent.event_code == event_code).first()
-        ts_datetime = datetime.fromisoformat(ts_data["timestamp"].replace("Z", "+00:00"))
+        ts_datetime = parse_iso_timestamp(ts_data["timestamp"])
 
         if not event and region:
             event = RiskEvent(
@@ -183,11 +232,15 @@ class ReplaySimulationEngine:
 
                 alert_type = "CLOUDBURST" if risk_calc["is_cloudburst"] else ("WATERLOGGING" if cell["elevation_m"] <= 4.0 else "FLASH_FLOOD")
 
+                cell_id, locality_name = _latlon_to_cell(cell["lat"], cell["lon"])
                 alert = Alert(
                     event_id=event.id if event else None,
                     region_id=region_id,
                     cell_lat=cell["lat"],
                     cell_lon=cell["lon"],
+                    cell_id=cell_id,
+                    locality_name=locality_name,
+                    timestep=self.current_timestep,
                     timestamp=ts_datetime,
                     alert_type=alert_type,
                     severity=risk_calc["severity"],
@@ -206,6 +259,8 @@ class ReplaySimulationEngine:
                 )
                 db.add(alert)
                 new_alerts.append(alert)
+                # Fire webhook for HIGH/CRITICAL alerts (non-blocking background thread)
+                dispatch_alert(alert)
 
         # Update event status
         if event:
@@ -230,6 +285,18 @@ class ReplaySimulationEngine:
 
         db.commit()
 
+        # --- Run full AI/ML inference pipeline (Modules 1-8) ---
+        ai_results = {}
+        try:
+            ai_engine = get_inference_engine()
+            ai_results = ai_engine.run_full_inference(
+                timestep_data=ts_data,
+                all_timesteps=self.data_cache.get("timesteps", []),
+                timestep_idx=self.current_timestep - 1,
+            )
+        except Exception as ai_err:
+            logger.warning(f"AI inference pipeline error: {ai_err}. Using heuristic fallback.")
+
         summary_msg = (
             f"Step {self.current_timestep}/{total_steps} [{ts_data['phase']}]: "
             f"Avg rain {ts_data['avg_rainfall_1h_mm']} mm/hr, Max depth {max_step_depth} cm. "
@@ -246,6 +313,7 @@ class ReplaySimulationEngine:
             "max_rainfall_1h_mm": ts_data.get("max_rainfall_1h_mm", 0.0),
             "new_alerts_count": len(new_alerts),
             "alerts_generated": new_alerts,
+            "ai_pipeline_results": ai_results,
             "summary_message": summary_msg
         }
 

@@ -1,0 +1,49 @@
+{
+  "horizon_metrics": {
+    "+1h": {
+      "mae_mm_hr": 11.05,
+      "rmse_mm_hr": 19.75,
+      "median_error_mm_hr": 3.85,
+      "samples": 60,
+      "within_20pct": 45.0
+    },
+    "+2h": {
+      "mae_mm_hr": 13.36,
+      "rmse_mm_hr": 23.41,
+      "median_error_mm_hr": 4.66,
+      "samples": 60,
+      "within_20pct": 40.0
+    },
+    "+3h": {
+      "mae_mm_hr": 12.28,
+      "rmse_mm_hr": 23.04,
+      "median_error_mm_hr": 2.73,
+      "samples": 60,
+      "within_20pct": 48.3
+    },
+    "+4h": {
+      "mae_mm_hr": 13.66,
+      "rmse_mm_hr": 23.23,
+      "median_error_mm_hr": 4.62,
+      "samples": 60,
+      "within_20pct": 36.7
+    },
+    "+5h": {
+      "mae_mm_hr": 12.54,
+      "rmse_mm_hr": 21.98,
+      "median_error_mm_hr": 4.49,
+      "samples": 60,
+      "within_20pct": 36.7
+    },
+    "+6h": {
+      "mae_mm_hr": 13.0,
+      "rmse_mm_hr": 20.51,
+      "median_error_mm_hr": 4.22,
+      "samples": 60,
+      "within_20pct": 30.0
+    }
+  },
+  "overall_mae": 12.65,
+  "overall_rmse": 22.03,
+  "total_forecast_points": 360
+}
