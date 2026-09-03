@@ -73,7 +73,7 @@ function SituationOverview({ aiData, replayStepData, mode }) {
 
 /* ═══ ACTIVE ALERTS ═══ */
 function AlertsSection({ timestep }) {
-  const [alerts, setAlerts] = useState([])
+  const [allAlerts, setAlerts] = useState([])
   const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
@@ -81,7 +81,10 @@ function AlertsSection({ timestep }) {
       const list = Array.isArray(d) ? d : (d?.alerts || [])
       setAlerts(list)
     }).catch(() => {})
-  }, [timestep])
+  }, [])  // Fetch once, filter locally
+
+  // Only show alerts for the CURRENT timestep
+  const alerts = allAlerts.filter(a => a.timestep === timestep)
 
   const sorted = [...alerts]
     .sort((a, b) => (b.risk_score_total || 0) - (a.risk_score_total || 0))
@@ -100,14 +103,24 @@ function AlertsSection({ timestep }) {
 
       {shown.length === 0 && <p className="text-dim">No active alerts at this timestep</p>}
 
-      {shown.map((a, i) => (
-        <div key={a.id || i} className="alert-row">
-          <span className={`alert-dot ${a.severity === 'CRITICAL' ? 'dot-red' : a.severity === 'HIGH' ? 'dot-orange' : 'dot-yellow'}`} />
-          <span className="alert-locality">{a.locality_name || `Cell ${a.cell_id}`}</span>
-          <span className="alert-type">{a.alert_type}</span>
-          <span className="alert-score">{fmt(a.risk_score_total, 0)}</span>
-        </div>
-      ))}
+      {shown.map((a, i) => {
+        const hazardIcon = a.alert_type === 'CLOUDBURST' ? '🌧️'
+          : a.alert_type === 'SEVERE_THUNDERSTORM' ? '⛈️'
+          : a.alert_type === 'FLASH_FLOOD' ? '🌊'
+          : '⚠️'
+        const hazardColor = a.alert_type === 'CLOUDBURST' ? '#3b82f6'
+          : a.alert_type === 'SEVERE_THUNDERSTORM' ? '#f59e0b'
+          : a.alert_type === 'FLASH_FLOOD' ? '#ef4444'
+          : '#eab308'
+        return (
+          <div key={a.id || i} className="alert-row">
+            <span className={`alert-dot ${a.severity === 'CRITICAL' ? 'dot-red' : a.severity === 'HIGH' ? 'dot-orange' : 'dot-yellow'}`} />
+            <span className="alert-locality">{a.locality_name || `Cell ${a.cell_id}`}</span>
+            <span className="alert-type" style={{color: hazardColor}}>{hazardIcon} {a.alert_type}</span>
+            <span className="alert-score">{fmt(a.risk_score_total, 0)}</span>
+          </div>
+        )
+      })}
 
       {sorted.length > 5 && (
         <button className="btn-expand" onClick={() => setExpanded(!expanded)}>

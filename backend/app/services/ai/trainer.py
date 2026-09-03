@@ -127,47 +127,86 @@ class VARUNATrainer:
                     features.append(float(val))
                 all_features.append(features)
 
-                # Target: severity score (0-3) derived from rainfall + elevation
+                # Multi-task labels: thunderstorm_prob, cloudburst_prob, flash_flood_prob, severity_score, depth
                 rain = cell.get("rainfall_1h_mm", 0)
+                rain_3h = cell.get("rainfall_3h_mm", 0)
                 elev = cell.get("elevation_m", 10)
                 cape = cell.get("cape_instability_jkg", 0)
                 soil = cell.get("soil_moisture_pct", 50)
-
-                # Multi-class target
-                risk = 0
-                if rain > 65 or (rain > 45 and cape > 2400):
-                    risk = 3  # CRITICAL
-                elif rain > 35 or (cape > 1500 and elev < 5):
-                    risk = 2  # HIGH
-                elif rain > 15 or (cape > 800 and soil > 70):
-                    risk = 1  # MEDIUM
-
-                all_targets.append(risk)
-
-        self.feature_matrix = np.array(all_features, dtype=np.float32)
-        self.target_matrix = np.array(all_targets, dtype=np.int64)
-
-        # Also create regression targets for depth prediction
-        self.depth_targets = []
-        for ts in timesteps:
-            for cell in ts["features"]:
-                rain = cell.get("rainfall_1h_mm", 0)
-                elev = cell.get("elevation_m", 10)
-                soil = cell.get("soil_moisture_pct", 50)
                 slope = cell.get("slope_deg", 2)
-                drainage = cell.get("drainage_outfall_dist_m", 5000)
+                ctt = cell.get("cloud_top_temp_celsius", -20)
+                wind = cell.get("wind_speed_10m_kmh", 10)
+                ctt_drop = cell.get("ctt_drop_rate_c_per_hr", 0)
+                drainage_dist = cell.get("drainage_outfall_dist_m", 5000)
+                is_high_tide = cell.get("is_high_tide_locked", False)
+                tide_height = cell.get("tide_height_m", 2.5)
 
-                # Simplified depth formula (consistent with inference)
+                # Thunderstorm probability (CAPE + cold CTT + wind)
+                ts_prob = 0.0
+                if cape > 500:
+                    ts_prob += 0.35 * min(1.0, (cape - 500) / 2500)
+                if ctt < -20:
+                    ts_prob += 0.30 * min(1.0, abs(ctt + 20) / 50)
+                if wind > 15:
+                    ts_prob += 0.20 * min(1.0, (wind - 15) / 45)
+                if ctt_drop > 5:
+                    ts_prob += 0.15 * min(1.0, ctt_drop / 20)
+                ts_prob = min(1.0, ts_prob)
+
+                # Cloudburst probability (extreme rain + moisture)
+                cb_prob = 0.0
+                if rain > 10:
+                    if rain >= 65:
+                        cb_prob += 0.50
+                    elif rain >= 45:
+                        cb_prob += 0.35 * min(1.0, (rain - 10) / 55)
+                    else:
+                        cb_prob += 0.20 * min(1.0, rain / 45)
+                if rain_3h > 30:
+                    cb_prob += 0.25 * min(1.0, (rain_3h - 30) / 120)
+                if cape > 1500:
+                    cb_prob += 0.15 * min(1.0, (cape - 1500) / 2000)
+                if soil > 70:
+                    cb_prob += 0.10 * min(1.0, (soil - 70) / 30)
+                cb_prob = min(1.0, cb_prob)
+
+                # Flash flood probability (rain + low elevation + poor drainage)
+                ff_prob = 0.0
+                if rain > 5:
+                    ff_prob += 0.30 * min(1.0, rain / 65)
+                if elev < 10:
+                    ff_prob += 0.25 * min(1.0, (10 - elev) / 10)
+                if soil > 60:
+                    ff_prob += 0.15 * min(1.0, (soil - 60) / 40)
+                if is_high_tide and tide_height > 3:
+                    ff_prob += 0.15 * min(1.0, (tide_height - 3) / 3)
+                if drainage_dist > 2000:
+                    ff_prob += 0.10 * min(1.0, (drainage_dist - 2000) / 8000)
+                if slope < 3:
+                    ff_prob += 0.05 * min(1.0, (3 - slope) / 3)
+                ff_prob = min(1.0, ff_prob)
+
+                # Severity score (weighted combination)
+                severity = ts_prob * 30 + cb_prob * 40 + ff_prob * 30
+
+                # Depth estimate
                 excess = max(0, rain - 17.5)
                 retention = 1.0 + (max(0, 7 - elev) / 7) * 1.5
                 depth = excess * 0.15 * retention * (0.6 + 0.4 * soil / 100)
-                self.depth_targets.append(depth)
 
-        self.depth_targets = np.array(self.depth_targets, dtype=np.float32)
+                all_targets.append([ts_prob, cb_prob, ff_prob, severity, depth])
+
+        self.feature_matrix = np.array(all_features, dtype=np.float32)
+        self.target_matrix = np.array(all_targets, dtype=np.float32)
+
+        # Separate targets for convenience
+        self.depth_targets = self.target_matrix[:, 4].copy()
+        self.severity_targets = self.target_matrix[:, 3].copy()
+        self.hazard_probs = self.target_matrix[:, :3].copy()  # ts, cb, ff
 
         logger.info(
             f"Feature matrix: {self.feature_matrix.shape}, "
-            f"Target distribution: {dict(zip(*np.unique(self.target_matrix, return_counts=True)))}"
+            f"Target matrix: {self.target_matrix.shape} (ts, cb, ff, severity, depth)"
         )
 
         return {
@@ -190,14 +229,14 @@ class VARUNATrainer:
 
         results = {}
 
-        # Split data
+        # Split data (no stratify for multi-dimensional targets)
         X_train, X_test, y_train, y_test = train_test_split(
             self.feature_matrix, self.target_matrix,
-            test_size=0.2, random_state=42, stratify=self.target_matrix
+            test_size=0.2, random_state=42
         )
         X_train, X_val, y_train, y_val = train_test_split(
             X_train, y_train,
-            test_size=0.15, random_state=42, stratify=y_train
+            test_size=0.15, random_state=42
         )
 
         # Depth regression split
@@ -293,15 +332,17 @@ class VARUNATrainer:
     def _train_multi_hazard(
         self, X_train, y_train, X_val, y_val, epochs, lr
     ) -> Dict[str, Any]:
-        """Train the multi-hazard risk predictor."""
+        """Train the multi-hazard risk predictor on all 5 outputs:
+        thunderstorm_prob, cloudburst_prob, flash_flood_prob, severity_score, flood_depth_cm
+        """
         from app.services.ai.model_architectures import MultiHazardPredictor
 
         model = MultiHazardPredictor(in_features=len(FEATURE_COLS)).to(self.device)
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
-        # Use MSE on severity_score (regression target 0-100 scaled to 0-3)
         criterion = nn.MSELoss()
 
+        # y_train columns: [ts_prob, cb_prob, ff_prob, severity, depth]
         X_tr = torch.FloatTensor(X_train).to(self.device)
         y_tr = torch.FloatTensor(y_train).to(self.device)
         X_v = torch.FloatTensor(X_val).to(self.device)
@@ -317,10 +358,15 @@ class VARUNATrainer:
             optimizer.zero_grad()
 
             output = model(X_tr)
-            # severity_score is 0-100, target is 0-3, so scale target to 0-100
-            pred_score = output["severity_score"]  # (B,) 0-100
-            target_score = y_tr * (100.0 / 3.0)     # scale 0-3 → 0-100
-            loss = criterion(pred_score, target_score)
+            # Multi-task loss: probabilities (0-1) + severity (0-100) + depth (cm)
+            loss_ts = criterion(output["thunderstorm_prob"].clamp(0, 1), y_tr[:, 0])
+            loss_cb = criterion(output["cloudburst_prob"].clamp(0, 1), y_tr[:, 1])
+            loss_ff = criterion(output["flash_flood_prob"].clamp(0, 1), y_tr[:, 2])
+            loss_sev = criterion(output["severity_score"], y_tr[:, 3])
+            loss_depth = criterion(output["flood_depth_cm"].clamp(min=0), y_tr[:, 4])
+
+            # Weighted loss: probabilities are primary, severity and depth secondary
+            loss = 0.30 * loss_ts + 0.30 * loss_cb + 0.30 * loss_ff + 0.05 * loss_sev + 0.05 * loss_depth
 
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -331,9 +377,18 @@ class VARUNATrainer:
             model.eval()
             with torch.no_grad():
                 val_output = model(X_v)
-                val_loss = criterion(val_output["severity_score"], y_v * (100.0 / 3.0))
-                val_pred_class = (val_output["severity_score"] / 100 * 3).round().long().clamp(0, 3)
-                val_acc = (val_pred_class == y_v.long()).float().mean().item()
+                val_loss_ts = criterion(val_output["thunderstorm_prob"].clamp(0, 1), y_v[:, 0])
+                val_loss_cb = criterion(val_output["cloudburst_prob"].clamp(0, 1), y_v[:, 1])
+                val_loss_ff = criterion(val_output["flash_flood_prob"].clamp(0, 1), y_v[:, 2])
+                val_loss = 0.30 * val_loss_ts + 0.30 * val_loss_cb + 0.30 * val_loss_ff
+
+                # Compute accuracy: dominant hazard matches
+                val_ts = val_output["thunderstorm_prob"]
+                val_cb = val_output["cloudburst_prob"]
+                val_ff = val_output["flash_flood_prob"]
+                val_dominant = torch.stack([val_ts, val_cb, val_ff], dim=1).argmax(dim=1)
+                true_dominant = y_v[:, :3].argmax(dim=1)
+                val_acc = (val_dominant == true_dominant).float().mean().item()
 
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
@@ -360,8 +415,12 @@ class VARUNATrainer:
         model.eval()
         with torch.no_grad():
             test_output = model(X_v)
-            test_pred_class = (test_output["severity_score"] / 100 * 3).round().long().clamp(0, 3)
-            final_acc = (test_pred_class == y_v.long()).float().mean().item()
+            val_ts = test_output["thunderstorm_prob"]
+            val_cb = test_output["cloudburst_prob"]
+            val_ff = test_output["flash_flood_prob"]
+            val_dominant = torch.stack([val_ts, val_cb, val_ff], dim=1).argmax(dim=1)
+            true_dominant = y_v[:, :3].argmax(dim=1)
+            final_acc = (val_dominant == true_dominant).float().mean().item()
 
         return {
             "final_val_accuracy": round(final_acc, 4),
@@ -472,21 +531,31 @@ class VARUNATrainer:
         """
         import torch.nn as nn
 
-        # Generate storm cell labels from features
-        # Storm cells: high CAPE + cold CTT + rainfall
+        # Generate storm cell labels from ACTUAL meteorological criteria
+        # Storm cells: high CAPE + cold cloud tops + significant rainfall
         storm_labels_train = []
         for i in range(len(X_train)):
-            # X_train is scaled, but we can use raw features for labeling
-            # Since we don't have raw here, generate synthetic labels
-            # based on the data distribution
-            label = 1.0 if (i % 7 == 0) else 0.0  # ~14% storm cells (realistic)
-            storm_labels_train.append(label)
+            # FEATURE_COLS indices: 0=rainfall_1h, 1=rainfall_3h, 2=rainfall_24h,
+            # 5=cape, 8=cloud_top_temp, 9=ctt_drop_rate, 10=wind_speed
+            cape = X_train[i][5] * 3000 if len(X_train[i]) > 5 else 0  # denormalize
+            rain = X_train[i][0] * 80 if len(X_train[i]) > 0 else 0
+            ctt = X_train[i][8] * 60 + 10 if len(X_train[i]) > 8 else 0  # denormalize
+            wind = X_train[i][10] * 40 if len(X_train[i]) > 10 else 0
+            # Storm = CAPE>1000 AND CTT<-30 AND rain>5 OR wind>25
+            is_storm = 1.0 if (cape > 1000 and ctt < -30 and rain > 5) or (wind > 25 and rain > 10) else 0.0
+            storm_labels_train.append(is_storm)
         storm_labels_train = torch.tensor(storm_labels_train, dtype=torch.float32).to(self.device)
+        n_storms = int(storm_labels_train.sum().item())
+        logger.info(f"Storm cell labels: {n_storms}/{len(X_train)} storm cells ({100*n_storms/len(X_train):.1f}%)")
 
         storm_labels_val = []
         for i in range(len(X_val)):
-            label = 1.0 if (i % 7 == 0) else 0.0
-            storm_labels_val.append(label)
+            cape = X_val[i][5] * 3000 if len(X_val[i]) > 5 else 0
+            rain = X_val[i][0] * 80 if len(X_val[i]) > 0 else 0
+            ctt = X_val[i][8] * 60 + 10 if len(X_val[i]) > 8 else 0
+            wind = X_val[i][10] * 40 if len(X_val[i]) > 10 else 0
+            is_storm = 1.0 if (cape > 1000 and ctt < -30 and rain > 5) or (wind > 25 and rain > 10) else 0.0
+            storm_labels_val.append(is_storm)
         storm_labels_val = torch.tensor(storm_labels_val, dtype=torch.float32).to(self.device)
 
         # Binary classifier: input features → storm probability

@@ -521,6 +521,14 @@ body {
   font-size: 8px !important;
 }
 .leaflet-control-attribution a {
+
+/* ─── Heatmap click cells ────────────────────────── */
+.varuna-click-cell { cursor: pointer; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.3); }
+}
   color: #94a3b8 !important;
 }
 
@@ -639,6 +647,16 @@ body {
   padding: 4px 0;
   border-bottom: 1px solid rgba(255,255,255,0.04);
   font-size: 11px;
+  animation: alertSlideIn 0.3s ease-out both;
+}
+.alert-row:nth-child(1) { animation-delay: 0ms; }
+.alert-row:nth-child(2) { animation-delay: 80ms; }
+.alert-row:nth-child(3) { animation-delay: 160ms; }
+.alert-row:nth-child(4) { animation-delay: 240ms; }
+.alert-row:nth-child(5) { animation-delay: 320ms; }
+@keyframes alertSlideIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 .alert-dot {
   width: 8px;

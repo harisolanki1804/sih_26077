@@ -34,11 +34,14 @@ export default function App() {
       ])
       setLiveData(indiaData)
       setLiveSummary(summaryData)
-      setAiData(indiaData)
+      // Only set aiData from live data when in India mode
+      if (mapMode === 'india') {
+        setAiData(indiaData)
+      }
     } catch (e) {
       console.error('Live data fetch failed:', e)
     }
-  }, [])
+  }, [mapMode])
 
   useEffect(() => {
     fetchLiveData()

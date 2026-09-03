@@ -230,7 +230,30 @@ class ReplaySimulationEngine:
                     tide_height_m=ts_data.get("tide_height_m", 2.5)
                 )
 
-                alert_type = "CLOUDBURST" if risk_calc["is_cloudburst"] else ("WATERLOGGING" if cell["elevation_m"] <= 4.0 else "FLASH_FLOOD")
+                # Determine alert type from multi-hazard model
+                try:
+                    ai_engine = get_inference_engine()
+                    mh_result = ai_engine.predict_multi_hazard(ts_data)
+                    # Find this cell in multi-hazard predictions
+                    cell_mh = None
+                    for cp in mh_result.get("cell_predictions", []):
+                        if cp["cell_index"] == cell.get("cell_index", -1):
+                            cell_mh = cp
+                            break
+                    if cell_mh:
+                        dominant = cell_mh["dominant_hazard"]
+                        if dominant == "CLOUDBURST":
+                            alert_type = "CLOUDBURST"
+                        elif dominant == "THUNDERSTORM":
+                            alert_type = "SEVERE_THUNDERSTORM"
+                        elif dominant == "FLASH_FLOOD":
+                            alert_type = "FLASH_FLOOD"
+                        else:
+                            alert_type = "WATERLOGGING" if cell["elevation_m"] <= 4.0 else "FLASH_FLOOD"
+                    else:
+                        alert_type = "CLOUDBURST" if risk_calc["is_cloudburst"] else ("WATERLOGGING" if cell["elevation_m"] <= 4.0 else "FLASH_FLOOD")
+                except Exception:
+                    alert_type = "CLOUDBURST" if risk_calc["is_cloudburst"] else ("WATERLOGGING" if cell["elevation_m"] <= 4.0 else "FLASH_FLOOD")
 
                 cell_id, locality_name = _latlon_to_cell(cell["lat"], cell["lon"])
                 alert = Alert(

@@ -1,5 +1,5 @@
 {
-  "training_date": "2026-09-02T13:38:06",
+  "training_date": "2026-09-03T07:13:45",
   "n_timesteps": 72,
   "n_features": 22,
   "feature_columns": [
@@ -28,18 +28,18 @@
   ],
   "results": {
     "multi_hazard": {
-      "final_val_accuracy": 0.9717,
-      "best_val_loss": 32.0072,
-      "epochs_trained": 100,
+      "final_val_accuracy": 0.9692,
+      "best_val_loss": 33.3983,
+      "epochs_trained": 93,
       "checkpoint": "multi_hazard_predictor.pt"
     },
     "nowcaster": {
-      "best_val_loss": 59269.820312,
+      "best_val_loss": 60351.324219,
       "n_sequences": 61,
       "checkpoint": "spatiotemporal_nowcaster.pt"
     },
     "storm_cell": {
-      "best_val_loss": 0.414846,
+      "best_val_loss": 0.054256,
       "checkpoint": "storm_cell_detector.pt"
     },
     "crowd_nlp": {
@@ -52,48 +52,48 @@
     "xai": {
       "checkpoint": "xai_attention_layer.pt",
       "learned_feature_importance": {
-        "rainfall_1h_mm": 0.0436,
-        "rainfall_3h_mm": 0.0386,
-        "rainfall_24h_mm": 0.0547,
-        "soil_moisture_pct": 0.0511,
-        "iwv_mm": 0.0488,
-        "cape_instability_jkg": 0.047,
-        "cin_jkg": 0.049,
-        "lifted_index": 0.0461,
-        "cloud_top_temp_celsius": 0.0455,
-        "ctt_drop_rate_c_per_hr": 0.0441,
-        "wind_speed_10m_kmh": 0.0471,
-        "wind_direction_deg": 0.0434,
-        "u_wind_ms": 0.0458,
-        "v_wind_ms": 0.0378,
-        "vertical_wind_shear_ms": 0.0504,
-        "low_level_convergence": 0.0357,
-        "elevation_m": 0.044,
-        "slope_deg": 0.0496,
-        "drainage_outfall_dist_m": 0.0527,
-        "runoff_coefficient": 0.0366,
-        "tide_height_m": 0.0423,
-        "is_high_tide_locked": 0.0462
+        "rainfall_1h_mm": 0.0384,
+        "rainfall_3h_mm": 0.0483,
+        "rainfall_24h_mm": 0.0452,
+        "soil_moisture_pct": 0.0388,
+        "iwv_mm": 0.0565,
+        "cape_instability_jkg": 0.0432,
+        "cin_jkg": 0.041,
+        "lifted_index": 0.0517,
+        "cloud_top_temp_celsius": 0.0482,
+        "ctt_drop_rate_c_per_hr": 0.0456,
+        "wind_speed_10m_kmh": 0.0493,
+        "wind_direction_deg": 0.0567,
+        "u_wind_ms": 0.0448,
+        "v_wind_ms": 0.0492,
+        "vertical_wind_shear_ms": 0.0477,
+        "low_level_convergence": 0.0421,
+        "elevation_m": 0.0384,
+        "slope_deg": 0.039,
+        "drainage_outfall_dist_m": 0.0432,
+        "runoff_coefficient": 0.0442,
+        "tide_height_m": 0.0398,
+        "is_high_tide_locked": 0.0485
       }
     },
     "flood_depth": {
       "checkpoint": "flood_depth_estimator.pt",
-      "val_mae_cm": 3.76
+      "val_mae_cm": 3.75
     },
     "conformal": {
       "alpha": 0.1,
       "guaranteed_coverage": 0.9,
       "empirical_coverage": 0.9023,
-      "quantile_threshold": 0.2895,
-      "avg_interval_width": 0.58,
+      "quantile_threshold": 0.3057,
+      "avg_interval_width": 0.61,
       "calibration_samples": 778,
       "residual_stats": {
-        "mean": 0.0748,
-        "std": 0.1524,
-        "median": 0.0031,
-        "p90": 0.289,
-        "p95": 0.4204,
-        "p99": 0.7019
+        "mean": 0.0776,
+        "std": 0.155,
+        "median": 0.0036,
+        "p90": 0.2963,
+        "p95": 0.4329,
+        "p99": 0.7087
       }
     },
     "shap": {
@@ -102,43 +102,43 @@
     },
     "test_evaluation": {
       "multi_hazard": {
-        "accuracy": 0.9707,
+        "accuracy": 0.966,
         "classification_report": {
           "0": {
-            "precision": 0.9912758996728462,
+            "precision": 0.9880434782608696,
             "recall": 0.9956188389923329,
-            "f1-score": 0.9934426229508196,
+            "f1-score": 0.9918166939443536,
             "support": 913.0
           },
           "1": {
-            "precision": 0.9022556390977443,
-            "recall": 0.9230769230769231,
-            "f1-score": 0.9125475285171103,
+            "precision": 0.92,
+            "recall": 0.8846153846153846,
+            "f1-score": 0.9019607843137255,
             "support": 130.0
           },
           "2": {
-            "precision": 0.9767441860465116,
-            "recall": 0.7777777777777778,
-            "f1-score": 0.865979381443299,
+            "precision": 0.9540229885057471,
+            "recall": 0.7685185185185185,
+            "f1-score": 0.8512820512820513,
             "support": 108.0
           },
           "3": {
-            "precision": 0.90625,
+            "precision": 0.8841463414634146,
             "recall": 1.0,
-            "f1-score": 0.9508196721311475,
+            "f1-score": 0.9385113268608414,
             "support": 145.0
           },
-          "accuracy": 0.970679012345679,
+          "accuracy": 0.9660493827160493,
           "macro avg": {
-            "precision": 0.9441314312042756,
-            "recall": 0.9241183849617585,
-            "f1-score": 0.9306973012605941,
+            "precision": 0.9365532020575079,
+            "recall": 0.912188185531559,
+            "f1-score": 0.920892714100243,
             "support": 1296.0
           },
           "weighted avg": {
-            "precision": 0.9716224935008014,
-            "recall": 0.970679012345679,
-            "f1-score": 0.9699374375896723,
+            "precision": 0.9667587946936649,
+            "recall": 0.9660493827160493,
+            "f1-score": 0.965128200204678,
             "support": 1296.0
           }
         },
@@ -150,16 +150,16 @@
             0
           ],
           [
-            8,
-            120,
-            2,
+            11,
+            115,
+            4,
             0
           ],
           [
             0,
-            9,
-            84,
-            15
+            6,
+            83,
+            19
           ],
           [
             0,
@@ -170,8 +170,8 @@
         ]
       },
       "flood_depth": {
-        "mae_cm": 3.96,
-        "rmse_cm": 6.67
+        "mae_cm": 3.95,
+        "rmse_cm": 6.66
       }
     }
   }

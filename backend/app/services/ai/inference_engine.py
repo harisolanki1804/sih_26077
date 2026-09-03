@@ -219,6 +219,9 @@ class VARUNAInferenceEngine:
         # Innovation: Satellite Data Integration
         results["satellite_data"] = self.fetch_satellite_overlay(timestep_data)
 
+        # Innovation: IMDAA Reanalysis Integration
+        results["imdaa_reanalysis"] = self.fetch_imdaa_reanalysis(timestep_data)
+
         return results
 
     # ===================================================================
@@ -554,16 +557,21 @@ class VARUNAInferenceEngine:
 
                 predictions = []
                 for i, cell in enumerate(features):
+                    ts_p, cb_p, ff_p = float(ts_probs[i]), float(cb_probs[i]), float(ff_probs[i])
+                    # Determine dominant hazard
+                    probs_dict = {"THUNDERSTORM": ts_p, "CLOUDBURST": cb_p, "FLASH_FLOOD": ff_p}
+                    dominant = max(probs_dict, key=probs_dict.get) if max(probs_dict.values()) > 0.3 else "SAFE"
                     predictions.append({
                         "cell_index": cell["cell_index"],
                         "lat": cell["lat"],
                         "lon": cell["lon"],
-                        "thunderstorm_prob": round(float(ts_probs[i]), 4),
-                        "cloudburst_prob": round(float(cb_probs[i]), 4),
-                        "flash_flood_prob": round(float(ff_probs[i]), 4),
+                        "thunderstorm_prob": round(ts_p, 4),
+                        "cloudburst_prob": round(cb_p, 4),
+                        "flash_flood_prob": round(ff_p, 4),
                         "severity_score": round(float(severity_scores[i]), 1),
                         "predicted_depth_cm": round(float(depths[i]), 1),
-                        "is_cloudburst": bool(float(cb_probs[i]) > 0.5),
+                        "dominant_hazard": dominant,
+                        "is_cloudburst": bool(cb_p > 0.5),
                         "is_waterlogging": bool(float(depths[i]) >= 15),
                         "model": "trained_neural_network",
                     })
@@ -588,36 +596,93 @@ class VARUNAInferenceEngine:
             except Exception as e:
                 logger.warning(f"Neural network inference failed, falling back to heuristic: {e}")
 
-        # Heuristic fallback
+        # Heuristic fallback — meteorologically grounded formulas
+        # Each hazard uses distinct physical thresholds so probabilities diverge properly
         predictions = []
         for cell in features:
             rain = cell.get("rainfall_1h_mm", 0)
             rain_3h = cell.get("rainfall_3h_mm", 0)
+            rain_24h = cell.get("rainfall_24h_mm", 0)
             cape = cell.get("cape_instability_jkg", 0)
             elev = cell.get("elevation_m", 10)
             soil = cell.get("soil_moisture_pct", 50)
             slope = cell.get("slope_deg", 2)
-            ctt = cell.get("cloud_top_temp_celsius", -40)
-            wind = cell.get("wind_speed_10m_kmh", 20)
+            ctt = cell.get("cloud_top_temp_celsius", -20)
+            wind = cell.get("wind_speed_10m_kmh", 10)
+            ctt_drop = cell.get("ctt_drop_rate_c_per_hr", 0)
+            drainage_dist = cell.get("drainage_outfall_dist_m", 5000)
 
-            ts_prob = min(1.0, max(0,
-                0.3 * min(1, cape / 3000) + 0.2 * min(1, abs(ctt) / 65)
-                + 0.2 * min(1, wind / 60) + 0.15 * min(1, rain / 50) + 0.15
-            ))
-            cb_prob = min(1.0, max(0,
-                0.4 * min(1, rain / 65) + 0.25 * min(1, cape / 2500)
-                + 0.15 * min(1, rain_3h / 150) + 0.1 * min(1, abs(ctt + 40) / 30) + 0.1
-            ))
-            ff_prob = min(1.0, max(0,
-                0.25 * min(1, rain / 50) + 0.2 * min(1, (100 - soil) / 50)
-                + 0.2 * min(1, (12 - elev) / 12)
-                + 0.15 * (1 if is_high_tide and tide_height > 4 else 0)
-                + 0.1 * min(1, (1 - slope / 15))
-                + 0.1 * min(1, cell.get("drainage_outfall_dist_m", 5000) / 10000)
-            ))
+            # --- THUNDERSTORM: requires high CAPE + cold CTT + strong wind ---
+            # CAPE > 1500 J/kg = moderate instability, > 2500 = extreme
+            # CTT < -40C = deep convection, < -60C = overshooting tops
+            # Wind > 40 km/h = gusty conditions
+            ts_score = 0.0
+            if cape > 500:
+                ts_score += 0.35 * min(1.0, (cape - 500) / 2500)
+            if ctt < -20:
+                ts_score += 0.30 * min(1.0, abs(ctt + 20) / 50)
+            if wind > 15:
+                ts_score += 0.20 * min(1.0, (wind - 15) / 45)
+            if ctt_drop > 5:
+                ts_score += 0.15 * min(1.0, ctt_drop / 20)
+            ts_prob = min(1.0, ts_score)
+
+            # --- CLOUDBURST: requires extreme rainfall + high moisture + instability ---
+            # Rain > 65 mm/hr = cloudburst threshold (IMD definition)
+            # Rain > 45 mm/hr + high CAPE = imminent cloudburst
+            # 3h accumulation > 100 mm = sustained deluge
+            cb_score = 0.0
+            if rain > 10:
+                if rain >= 65:
+                    cb_score += 0.50  # above cloudburst threshold
+                elif rain >= 45:
+                    cb_score += 0.35 * min(1.0, (rain - 10) / 55)
+                else:
+                    cb_score += 0.20 * min(1.0, rain / 45)
+            if rain_3h > 30:
+                cb_score += 0.25 * min(1.0, (rain_3h - 30) / 120)
+            if cape > 1500:
+                cb_score += 0.15 * min(1.0, (cape - 1500) / 2000)
+            if soil > 70:
+                cb_score += 0.10 * min(1.0, (soil - 70) / 30)
+            cb_prob = min(1.0, cb_score)
+
+            # --- FLASH FLOOD: requires rain + low elevation + poor drainage + tide ---
+            # Elevation < 5m = coastal flood zone
+            # Drainage > 5000m from outfall = poor drainage
+            # High tide lock = water cannot drain to sea
+            ff_score = 0.0
+            if rain > 5:
+                ff_score += 0.30 * min(1.0, rain / 65)
+            if elev < 10:
+                ff_score += 0.25 * min(1.0, (10 - elev) / 10)
+            if soil > 60:
+                ff_score += 0.15 * min(1.0, (soil - 60) / 40)
+            if is_high_tide and tide_height > 3:
+                ff_score += 0.15 * min(1.0, (tide_height - 3) / 3)
+            if drainage_dist > 2000:
+                ff_score += 0.10 * min(1.0, (drainage_dist - 2000) / 8000)
+            if slope < 3:
+                ff_score += 0.05 * min(1.0, (3 - slope) / 3)
+            ff_prob = min(1.0, ff_score)
+
+            # Severity = weighted combination
             severity_score = round(ts_prob * 30 + cb_prob * 40 + ff_prob * 30, 1)
+
+            # Flood depth estimate
             excess_rain = max(0, rain - 25 * 0.7)
             depth = round(excess_rain * 0.15 * (1 + 0.4 * soil / 100) * (1.5 if is_high_tide else 1.0), 1)
+
+            # Dominant hazard — only classify if probability exceeds threshold
+            max_prob = max(ts_prob, cb_prob, ff_prob)
+            if max_prob < 0.15:
+                dominant = "SAFE"
+            elif max_prob == ts_prob:
+                dominant = "THUNDERSTORM"
+            elif max_prob == cb_prob:
+                dominant = "CLOUDBURST"
+            else:
+                dominant = "FLASH_FLOOD"
 
             predictions.append({
                 "cell_index": cell["cell_index"],
@@ -628,6 +693,7 @@ class VARUNAInferenceEngine:
                 "flash_flood_prob": round(ff_prob, 4),
                 "severity_score": severity_score,
                 "predicted_depth_cm": max(0, depth),
+                "dominant_hazard": dominant,
                 "is_cloudburst": bool(rain >= 65 or (rain >= 45 and cape >= 2400)),
                 "is_waterlogging": bool(depth >= 15),
                 "model": "heuristic_fallback",
@@ -1248,6 +1314,37 @@ class VARUNAInferenceEngine:
             return result
         except Exception as e:
             logger.warning(f"Satellite fetch failed: {e}")
+            return {"source": "unavailable", "error": str(e)}
+
+    def fetch_imdaa_reanalysis(
+        self, timestep_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Innovation: Fetch IMDAA reanalysis data for thermodynamic profiles.
+        
+        Uses 3-tier fallback:
+          1. IMDAA NetCDF files (real reanalysis from NCMRWF)
+          2. Open-Meteo ERA5 (free API)
+          3. Synthetic profiles from Mumbai monsoon climatology
+        """
+        try:
+            from app.services.data.imdaa_fetcher import imdaa_fetcher
+            
+            # Get center point of Mumbai grid
+            lat = 19.08
+            lon = 72.88
+            timestamp = timestep_data.get("timestamp", None)
+            
+            result = imdaa_fetcher.fetch_reanalysis_profile(
+                lat=lat, lon=lon, timestamp=timestamp
+            )
+            
+            # Add metadata
+            result["used_in_inference"] = True
+            result["purpose"] = "Thermodynamic profiles for CAPE/CIN, wind shear, humidity"
+            
+            return result
+        except Exception as e:
+            logger.warning(f"IMDAA reanalysis fetch failed: {e}")
             return {"source": "unavailable", "error": str(e)}
 
     def classify_crowd_report(

@@ -16,3 +16,7 @@ torchvision>=0.17.0
 # transformers>=4.38.0    # uncomment for BERT-based crowd report classifier (Module 9)
 scikit-learn>=1.4.0
 pandas>=2.2.0
+
+# --- IMDAA Reanalysis Data ---
+netCDF4>=1.6.0       # Read IMDAA NetCDF files
+xarray>=2024.1.0     # Multi-dimensional array handling
