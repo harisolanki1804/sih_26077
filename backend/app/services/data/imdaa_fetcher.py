@@ -211,6 +211,7 @@ class IMDDAReanalysisFetcher:
         lat: float = 19.08,
         lon: float = 72.88,
         timestamp: Optional[str] = None,
+        allow_network: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """
         Fetch atmospheric profile at a single point.
@@ -219,7 +220,16 @@ class IMDDAReanalysisFetcher:
         - CAPE/CIN calculation from temperature + humidity profiles
         - Wind shear from U/V at different pressure levels
         - Geopotential height for pressure-level analysis
+
+        Resolution (never fabricated):
+          1. IMDAA NetCDF files on disk (real reanalysis, works offline)
+          2. Open-Meteo ERA5 reanalysis — only when allow_network=True
+             (default controlled by VARUNA_LIVE_FETCH=1)
+          3. explicit 'unavailable' response otherwise
         """
+        if allow_network is None:
+            allow_network = os.getenv("VARUNA_LIVE_FETCH", "0") == "1"
+
         # Check cache
         cache_key = f"{lat:.2f}_{lon:.2f}_{timestamp or 'now'}"
         if cache_key in self._cache:
@@ -229,17 +239,25 @@ class IMDDAReanalysisFetcher:
 
         result = None
 
-        # Priority 1: IMDAA NetCDF files
+        # Priority 1: IMDAA NetCDF files (local, always allowed)
         if self._check_imdaa_files():
             result = self._fetch_from_imdaa_files(lat, lon, timestamp)
 
-        # Priority 2: Open-Meteo ERA5
-        if not result:
+        # Priority 2: Open-Meteo ERA5 (real reanalysis) only when live fetch is on
+        if not result and allow_network:
             result = self._fetch_open_meteo_profile(lat, lon, timestamp)
 
-        # Priority 3: Synthetic profiles
         if not result:
-            result = self._generate_synthetic_profile(lat, lon)
+            result = {
+                "source": "unavailable_offline" if not allow_network else "unavailable",
+                "is_real_data": False,
+                "timestamp": timestamp or datetime.utcnow().isoformat(),
+                "note": (
+                    "No IMDAA NetCDF file is present and live reanalysis fetch is off. "
+                    "Place IMDAA files in data/imdaa/ or start with VARUNA_LIVE_FETCH=1 "
+                    "to use Open-Meteo ERA5 as the real reanalysis fallback."
+                ),
+            }
 
         self._cache[cache_key] = result
         self._cache_time[cache_key] = time.time()

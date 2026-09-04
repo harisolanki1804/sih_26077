@@ -5,9 +5,8 @@
  * Shows: situation overview, active alerts, storm info, key metrics.
  * All KPIs sync with the current timestep.
  */
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { riskColor, fmt, fmtPct } from '../utils/helpers'
-import { api } from '../utils/api'
 
 const LOCALITY = [
   ['Colaba','Fort','Churchgate','Marine Drive','Nariman Point','Malabar Hill','Walkeshwar','Haji Ali','Parel'],
@@ -31,8 +30,8 @@ export default function LeftPanel({ timestep, aiData, replayStepData, selectedCe
       {/* 2. Data Sources & Model Status */}
       <DataSourceSection aiData={aiData} />
 
-      {/* 3. Active Alerts */}
-      <AlertsSection timestep={timestep} />
+      {/* 3. Active Alerts — drawn straight from the step response so they can never go stale */}
+      <AlertsSection timestep={timestep} alerts={replayStepData?.alerts_generated} />
 
       {/* 4. Stay Alert — timeline synced */}
       <StayAlertSection timestep={timestep} aiData={aiData} mode={mode} />
@@ -57,6 +56,12 @@ function SituationOverview({ aiData, replayStepData, mode }) {
   const maxDepth = flood.max_water_depth_cm ?? 0
   const stormCount = storm.total_cells_detected ?? 0
 
+  // All three hazard families, always visible (cells classified by the head)
+  const dist = risk.risk_class_distribution || {}
+  const tsCount = dist.THUNDERSTORM ?? 0
+  const cbCount = dist.CLOUDBURST ?? 0
+  const ffCount = dist.FLASH_FLOOD ?? 0
+
   return (
     <div className="section-card compact">
       <h4>📊 Situation Overview</h4>
@@ -66,27 +71,27 @@ function SituationOverview({ aiData, replayStepData, mode }) {
         <KPICard label="Max Depth" value={`${fmt(maxDepth, 0)}cm`} color={maxDepth > 30 ? '#ef4444' : '#eab308'} />
         <KPICard label="Storms" value={fmt(stormCount, 0)} color={stormCount > 5 ? '#f97316' : '#06b6d4'} />
       </div>
+      <div className="kpi-grid-3 mini" style={{ marginTop: 8 }}>
+        <MiniKPI label="⛈ TS cells" value={fmt(tsCount, 0)} color={tsCount > 10 ? '#f59e0b' : '#64748b'} />
+        <MiniKPI label="🌧 CB cells" value={fmt(cbCount, 0)} color={cbCount > 10 ? '#3b82f6' : '#64748b'} />
+        <MiniKPI label="🌊 FF cells" value={fmt(ffCount, 0)} color={ffCount > 10 ? '#ef4444' : '#64748b'} />
+      </div>
     </div>
   )
 }
 
 
 /* ═══ ACTIVE ALERTS ═══ */
-function AlertsSection({ timestep }) {
-  const [allAlerts, setAlerts] = useState([])
+function AlertsSection({ timestep, alerts }) {
   const [expanded, setExpanded] = useState(false)
 
-  useEffect(() => {
-    api.alerts().then(d => {
-      const list = Array.isArray(d) ? d : (d?.alerts || [])
-      setAlerts(list)
-    }).catch(() => {})
-  }, [])  // Fetch once, filter locally
+  // The backend already deactivates previous alerts and raises the current
+  // step's alerts inside POST /replay/step, so we render alerts_generated
+  // from that same response — no separate fetch, no race, always in sync.
+  const list = (Array.isArray(alerts) ? alerts : [])
+    .filter(a => a.timestep === undefined || a.timestep === timestep)
 
-  // Only show alerts for the CURRENT timestep
-  const alerts = allAlerts.filter(a => a.timestep === timestep)
-
-  const sorted = [...alerts]
+  const sorted = [...list]
     .sort((a, b) => (b.risk_score_total || 0) - (a.risk_score_total || 0))
 
   const critical = sorted.filter(a => a.severity === 'CRITICAL')
@@ -101,7 +106,7 @@ function AlertsSection({ timestep }) {
         {high.length > 0 && <span className="badge badge-orange">{high.length} High</span>}
       </h4>
 
-      {shown.length === 0 && <p className="text-dim">No active alerts at this timestep</p>}
+      {shown.length === 0 && <p className="text-dim">🟢 No active alerts at this timestep</p>}
 
       {shown.map((a, i) => {
         const hazardIcon = a.alert_type === 'CLOUDBURST' ? '🌧️'
@@ -227,6 +232,18 @@ function DataSourceSection({ aiData }) {
   const physicsValid = physics.conservation_valid ?? physics.summary?.physics_valid
   const conformalGuarantee = trust.confidence_guarantee || 'N/A'
 
+  // Truthful INSAT status — the system never fabricates satellite data:
+  // it reports LIVE when a real MOSDAC granule is cached, otherwise why not.
+  const satName = (sat.satellite && String(sat.satellite).includes('3DR'))
+    ? 'INSAT-3DR'
+    : (sat.satellite && String(sat.satellite).includes('3D')) ? 'INSAT-3D' : 'INSAT-3D/3DR'
+  let satLabel = 'Waiting', satColor = '#eab308'
+  if (satReal) { satLabel = 'LIVE'; satColor = '#22c55e' }
+  else if (String(satSource).includes('SYNTHETIC')) { satLabel = 'Synthetic'; satColor = '#ef4444' }
+  else if (String(satSource).includes('unavailable_offline')) { satLabel = 'Offline · fetch once'; satColor = '#94a3b8' }
+  else if (String(satSource).includes('unavailable_retry')) { satLabel = 'Retrying…'; satColor = '#eab308' }
+  else if (String(satSource).startsWith('unavailable')) { satLabel = 'Unavailable'; satColor = '#f97316' }
+
   return (
     <div className="section-card compact">
       <h4>🤖 AI Engine Status</h4>
@@ -238,8 +255,8 @@ function DataSourceSection({ aiData }) {
         <div className="source-item">
           <span className="source-icon" style={{ fontSize: '14px' }}>🛰️</span>
           <div className="source-info">
-            <span className="source-name" style={{ fontSize: '10px' }}>INSAT-3D</span>
-            <span className="source-status" style={{ color: satReal ? '#22c55e' : '#eab308', fontSize: '10px', fontWeight: 600 }}>{satReal ? 'LIVE' : satSource === 'SYNTHETIC_INSAT3D_CALIBRATED' ? 'Synthetic' : 'Calibrated'}</span>
+            <span className="source-name" style={{ fontSize: '10px' }}>{satName}</span>
+            <span className="source-status" style={{ color: satColor, fontSize: '10px', fontWeight: 600 }}>{satLabel}</span>
           </div>
         </div>
         <div className="source-item">

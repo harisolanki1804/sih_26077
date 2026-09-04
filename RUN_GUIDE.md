@@ -54,6 +54,57 @@ MOSDAC_PASSWORD=your_password
 3. Verify email → login
 4. Use those credentials in `.env`
 
+### 2b. Real Satellite (MOSDAC) — how it behaves now
+
+MOSDAC products supported (verified against the live API):
+```
+3RIMG_L1C_SGP   ← INSAT-3DR L1C imagery (preferred, user-selected)
+3SIMG_L1B_STD   ← INSAT-3D L1B imagery   (fallback, IMG_* band layout)
+3RIMG_L1B_STD   ← INSAT-3DR L1B imagery  (fallback)
+3DIMG_L2I_TPW   ← L2 Total Precipitable Water (small quick-win product)
+```
+
+When `MOSDAC_USERNAME`/`MOSDAC_PASSWORD` are in `.env`, the backend performs
+**one automatic background fetch on startup** (daemon thread) that downloads and
+caches the newest real granule. The replay engine itself never blocks on the
+network; once the real granule is cached it is served offline forever.
+The dashboard INSAT-3D badge then shows **LIVE** — if the network is down it
+honestly shows `Offline · fetch once` / `Retrying…` instead of fake data.
+
+Start the backend from the **`backend/` folder** (so `.env` is read):
+```bash
+cd backend
+../.venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+First-time granule downloads are ~90 MB; on a slow link the code auto-resumes
+partial downloads and falls back to a smaller product. To force a live refresh
+at any time:
+```bash
+VARUNA_LIVE_FETCH=1 ../.venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+### 2c. IMDAA Reanalysis (you said you registered — here is exactly what to do)
+
+IMDAA is **not an API** — you download NetCDF files from the NCMRWF portal:
+
+1. Log in at https://rds.ncmrwf.gov.in (your registration works here)
+2. Dataset page → select **IMDAA Reanalysis**
+3. Pick the **Mumbai box** (18.8–19.3 N, 72.7–73.1 E) and **July 2024**
+4. Download the **single-level** hourly files and **pressure-level** 3-hourly
+   files (temperature, humidity, U/V wind, geopotential)
+5. Place them in:
+```
+backend/data/imdaa/single_level/IMDAA_*.nc
+backend/data/imdaa/pressure_level/IMDAA_*.nc
+```
+6. Restart the backend — it auto-detects the files (`source: IMDAA_ACTUAL`).
+   Until then, with `VARUNA_LIVE_FETCH=1`, the backend uses genuine Open-Meteo
+   ERA5 reanalysis as a real-data fallback (never labelled as IMDAA).
+
+**Prototype shortcut:** you do NOT need full-pressure-level IMDAA for the demo —
+single-level CAPE/CIN/humidity + the real rainfall event is enough; the
+pressure-level profiles only refine wind-shear. Skip that download if pressed.
+
 ### 3. Start the System
 
 **Terminal 1 — Backend:**
@@ -69,6 +120,40 @@ npm run dev
 ```
 
 **Open:** http://localhost:5173
+
+---
+
+## Module Status — Real vs Rule-Based (verify yourself)
+
+Every module response carries an `inference_mode` field. After starting the
+backend, run:
+
+```bash
+curl -s -X POST "http://127.0.0.1:8000/api/v1/replay/step?step_to=36" | \
+  python -m json.tool | grep -E "inference_mode|dominant_hazard|trust_level" | sort | uniq -c
+```
+
+| Module | Backend path | Status (this repo) | How to verify |
+|---|---|---|---|
+| 1. Storm cell detection | `storm_cells` | **Trained NN** classifier (checkpoint `storm_cell_detector.pt`) + deterministic wind-advection tracking | `inference_mode: trained_neural_network` |
+| 2. Risk heatmap | `risk_heatmap` | **Derived from trained multi-hazard model** (map and alerts always agree) | `inference_mode` = multi-hazard mode |
+| 3. Nowcasting 2–6 h | `nowcast` | **Trained ConvLSTM+Transformer** (`spatiotemporal_nowcaster.pt`, bias-corrected to latest obs) | `inference_mode: trained_neural_network` |
+| 4. Multi-hazard | `multi_hazard` | **Trained multi-task NN** — thunderstorm, cloudburst, flash flood heads | `inference_mode: trained_neural_network` |
+| 5. Cross-source fusion | `fused_features` | Deterministic alignment of INSAT + reanalysis + DEM + QPE signals (no NN checkpoint yet) | `inference_mode: deterministic_source_alignment` |
+| 6. Flood depth | `flood_depth` | **Trained NN** (`flood_depth_estimator.pt`), physics-informed fallback only when NN fails | `model: trained_neural_network` |
+| 7. Trust scoring | `trust_score` | **Trained autoencoder scorer** + conformal interval calibrated on data | `inference_mode: trained_neural_network` |
+| 8. XAI layer | `xai_explanation` | **Trained attention layer** (`xai_attention_layer.pt`) → top-3 drivers per alert | `explanation_method: trained_XAI_attention_model` |
+| 9. Crowd-report NLP | `classify_crowd_report` | **Trained embedding classifier** (labels from keyword rules on 20 seed reports — expand with real reports) | `inference_mode: trained_neural_network` |
+
+**Honest caveats** — read before demoing to judges:
+- The 72-step feature grid driving the demo is calibrated to the real 26–29 Jul
+  2024 Mumbai deluge rainfall (ERA5/Open-Meteo) but the *full* 22-column feature
+  vectors (CAPE/CTT/IWV fields per cell) are reconstructed, not observed.
+- Model labels are physics-rule pseudo-labels (IMD-style thresholds), which is
+  the standard way to prototype when per-cell ground-truth hazard labels don't
+  exist. Retrain on months of real data (below) before production.
+- Module 5 fusion has no trained cross-attention checkpoint yet — it aligns
+  real per-source values deterministically.
 
 ---
 

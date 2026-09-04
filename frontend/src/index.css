@@ -1735,17 +1735,34 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* ═══ RESPONSIVE ═══ */
+/* ═══ RESPONSIVE ═══
+   Wide screens: left KPIs | map | right KPIs.
+   Narrow screens (laptops / preview panes): map on top, panels below —
+   the panels are NEVER hidden, otherwise every indicator disappears.
+*/
+
+@media (min-width: 1400px) {
+  .app-body.three-col { grid-template-columns: 300px 1fr 320px; }
+}
 
 @media (max-width: 1100px) {
-  .app-body.three-col { grid-template-columns: 1fr; }
-  .side-panel { display: none; }
+  .app-body.three-col {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(320px, 58vh) auto auto;
+    overflow-y: auto;
+  }
+  .center-panel { grid-row: 1; }
+  .left-panel { grid-row: 2; border-right: none; border-top: 1px solid var(--border); }
+  .right-panel { grid-row: 3; border-left: none; border-top: 1px solid var(--border); }
+  .side-panel { display: flex; overflow: visible; min-height: 0; }
+  .panel-scroll { max-height: 46vh; }
 }
 
 @media (max-width: 768px) {
   .topbar-chips { display: none; }
   .progress-section { display: none; }
   .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .replay-controls-topbar { flex-wrap: wrap; }
 }
 
 /* ═══════════════════════════════════════════════════════════════

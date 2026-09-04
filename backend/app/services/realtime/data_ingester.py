@@ -100,16 +100,74 @@ class RealtimeDataIngester:
         else:
             grid_points = self._india_grid_points()
 
-        # Fetch from Open-Meteo (batched)
-        raw_data = self._fetch_open_meteo_batch(grid_points)
+        # ── Offline-first (never let the dashboard hang) ────────────────
+        # Unless the operator explicitly enables live mode, serve a fresh disk
+        # cache when present; otherwise build the grid from deterministic
+        # climatological defaults (labelled honestly) instead of blocking on
+        # network timeouts. Replay/demo mode must never depend on internet.
+        want_live = os.environ.get("VARUNA_LIVE_FETCH", "") == "1"
+        cache_file = os.path.join(CACHE_DIR, f"{region}_latest.json")
 
-        # Normalize into VARUNA format
-        normalized = self._normalize_to_grid(raw_data, grid_points)
+        if not want_live:
+            try:
+                if os.path.exists(cache_file):
+                    age = time.time() - os.path.getmtime(cache_file)
+                    if age < 900:  # 15 min
+                        with open(cache_file, "r", encoding="utf-8") as f:
+                            cached = json.load(f)
+                        cached["served_from"] = "disk_cache"
+                        return cached
+            except Exception:
+                pass
 
-        # Cache
+        raw_data = []
+        if want_live:
+            raw_data = self._fetch_open_meteo_batch(grid_points)
+
+        if raw_data:
+            normalized = self._normalize_to_grid(raw_data, grid_points)
+            source = "OPEN_METEO_LIVE"
+        else:
+            # Deterministic demo grid — zero-heavy, stable across calls so the
+            # dashboard never flickers; clearly labelled as demo/offline.
+            cells = []
+            for point in grid_points:
+                cells.append({
+                    "cell_index": point["cell_index"],
+                    "lat": point["lat"],
+                    "lon": point["lon"],
+                    "city": point.get("city", "Unknown"),
+                    "elevation_m": point.get("elevation", 50),
+                    "rainfall_1h_mm": 0.0,
+                    "rainfall_3h_mm": 0.0,
+                    "temperature_celsius": 28.0,
+                    "humidity_pct": 70.0,
+                    "soil_moisture_pct": 45.0,
+                    "cape_instability_jkg": 500.0,
+                    "cloud_top_temp_celsius": -40.0,
+                    "wind_speed_10m_kmh": 10.0,
+                    "wind_direction_10m_deg": 230.0,
+                })
+            normalized = {
+                "source": "DEMO_OFFLINE_GRID",
+                "is_live": False,
+                "timestamp": datetime.utcnow().isoformat(),
+                "grid_type": region,
+                "total_cells": len(cells),
+                "cells": cells,
+            }
+            source = "DEMO_OFFLINE_GRID"
+
+        # Cache (memory + disk) so repeated calls stay instant
         self._cache[cache_key] = normalized
         self._cache_time[cache_key] = time.time()
-
+        try:
+            os.makedirs(CACHE_DIR, exist_ok=True)
+            with open(cache_file, "w", encoding="utf-8") as f:
+                json.dump(normalized, f)
+        except Exception:
+            pass
+        normalized["served_from"] = source
         return normalized
 
     def fetch_mumbai_detailed(self) -> Dict[str, Any]:

@@ -50,12 +50,20 @@ random.seed(42)  # Reproducible but varied
 
 
 def _grid_coords():
-    """Return (lat, lon) for each cell index."""
+    """Return (lat, lon) for each cell index.
+
+    IMPORTANT: these are CELL CENTERS, not grid nodes. The frontend map and the
+    backend replay engine both place each cell at (min + (idx + 0.5) * step), so
+    the dataset MUST use the same convention or every heat point is displaced by
+    up to a full cell from the true locality.
+    """
     coords = []
+    lat_step = (LAT_MAX - LAT_MIN) / GRID_ROWS
+    lon_step = (LON_MAX - LON_MIN) / GRID_COLS
     for r in range(GRID_ROWS):
-        lat = LAT_MIN + (r / (GRID_ROWS - 1)) * (LAT_MAX - LAT_MIN)
+        lat = LAT_MIN + (r + 0.5) * lat_step
         for c in range(GRID_COLS):
-            lon = LON_MIN + (c / (GRID_COLS - 1)) * (LON_MAX - LON_MIN)
+            lon = LON_MIN + (c + 0.5) * lon_step
             coords.append((round(lat, 4), round(lon, 4)))
     return coords
 

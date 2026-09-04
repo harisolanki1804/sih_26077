@@ -53,9 +53,16 @@ def get_insat3d_data(
     When MOSDAC is unreachable, returns physically-consistent
     synthetic data calibrated to real Mumbai monsoon climatology.
     """
+    import os as _os
     from app.services.satellite import MOSDACSatelliteFetcher
     fetcher = MOSDACSatelliteFetcher()
-    return fetcher.fetch_satellite_snapshot(timestamp=timestamp)
+    # Offline-first: cached real granule is served instantly; the live MOSDAC
+    # API is only touched when explicitly enabled with VARUNA_LIVE_FETCH=1
+    # (the replay engine's background fetch caches a real granule on its own).
+    return fetcher.fetch_satellite_snapshot(
+        timestamp=timestamp,
+        allow_network=_os.getenv("VARUNA_LIVE_FETCH", "0") == "1",
+    )
 
 
 @router.get(
@@ -71,10 +78,12 @@ def get_cloud_motion_vectors(
     CMVs show wind direction and speed at cloud level,
     critical for predicting storm cell movement.
     """
+    import os as _os
     from app.services.satellite import MOSDACSatelliteFetcher
     fetcher = MOSDACSatelliteFetcher()
-    frame1 = fetcher.fetch_satellite_snapshot()
-    frame2 = fetcher.fetch_satellite_snapshot()
+    allow = _os.getenv("VARUNA_LIVE_FETCH", "0") == "1"
+    frame1 = fetcher.fetch_satellite_snapshot(allow_network=allow)
+    frame2 = fetcher.fetch_satellite_snapshot(allow_network=allow)
     return fetcher.compute_cmv(frame1, frame2)
 
 

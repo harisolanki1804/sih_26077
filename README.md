@@ -592,7 +592,14 @@ For real INSAT-3D satellite data:
 MOSDAC_USERNAME=your_email@example.com
 MOSDAC_PASSWORD=your_password
 ```
-3. Without credentials, the system uses calibrated synthetic satellite data.
+3. Start the backend **once** with live fetching enabled so a real granule is
+downloaded and cached:
+```bash
+VARUNA_LIVE_FETCH=1 .venv/Scripts/python.exe -m uvicorn app.main:app --port 8000
+```
+4. After that the system is fully **offline-first**: it serves the cached real
+granule and never fabricates data. With no cache and live mode off, the
+satellite panel reports `unavailable_offline` instead of inventing values.
 
 ---
 

@@ -73,6 +73,23 @@ def _latlon_to_cell(lat: float, lon: float) -> tuple:
     return cell_id, name
 
 
+def _is_sea_cell(lat: float, lon: float) -> bool:
+    """True when the cell centre is open sea (Arabian Sea west of Mumbai).
+
+    Matches the frontend map mask so that sea cells never raise alerts:
+      - column 0 (lon ~72.79) for the southern rows is open sea; only the
+        far-north island rows (Marve/Manori/Gorai ~72.79) touch land.
+      - the row-3/col-1 centre sits in Mahim Bay.
+    """
+    c = int((lon - LON_MIN) / (LON_MAX - LON_MIN) * COLS)
+    r = int((lat - LAT_MIN) / (LAT_MAX - LAT_MIN) * ROWS)
+    if c == 0 and r <= 6:
+        return True
+    if c == 1 and r == 3:
+        return True
+    return False
+
+
 class ReplaySimulationEngine:
     def __init__(self):
         self.current_timestep: int = 1
@@ -193,6 +210,10 @@ class ReplaySimulationEngine:
         max_step_depth = 0.0
 
         for cell in ts_data["features"]:
+            # Never raise alerts over open sea or the creek — only land cells matter
+            cell_id0, locality0 = _latlon_to_cell(cell["lat"], cell["lon"])
+            if _is_sea_cell(cell["lat"], cell["lon"]) or locality0 in ("Sea", "Thane Creek"):
+                continue
             # Evaluate AI Multi-Hazard Risk Model
             risk_calc = risk_model_service.calculate_cell_risk(
                 rain_1h=cell["rainfall_1h_mm"],
@@ -255,7 +276,7 @@ class ReplaySimulationEngine:
                 except Exception:
                     alert_type = "CLOUDBURST" if risk_calc["is_cloudburst"] else ("WATERLOGGING" if cell["elevation_m"] <= 4.0 else "FLASH_FLOOD")
 
-                cell_id, locality_name = _latlon_to_cell(cell["lat"], cell["lon"])
+                cell_id, locality_name = cell_id0, locality0
                 alert = Alert(
                     event_id=event.id if event else None,
                     region_id=region_id,

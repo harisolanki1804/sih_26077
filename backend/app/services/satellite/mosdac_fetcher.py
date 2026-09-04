@@ -57,9 +57,12 @@ MOSDAC_DOWNLOAD_URL = f"{MOSDAC_BASE}/download_api/download"
 MOSDAC_REFRESH_URL = f"{MOSDAC_BASE}/download_api/refresh-token"
 MOSDAC_LOGOUT_URL = f"{MOSDAC_BASE}/download_api/logout"
 
-# Available INSAT-3D dataset IDs on MOSDAC
+# Available INSAT-3D / INSAT-3DR dataset IDs on MOSDAC
 INSAT3D_DATASETS = {
+    # User-selected: INSAT-3DR Level-1C imagery (sector/geo product, ~4 km)
+    "imagery_3dr_l1c_sgp": "3RIMG_L1C_SGP",
     "imagery_l1b": "3SIMG_L1B_STD",
+    "imagery_3dr_l1b": "3RIMG_L1B_STD",
     "tpw": "3DIMG_L2I_TPW",
     "olr": "3DIMG_L2I_OLR",
     "qpe": "3DIMG_L2I_PRECIPRATE",
@@ -69,6 +72,17 @@ INSAT3D_DATASETS = {
     "sst": "3DIMG_L2I_SST",
     "fog": "3DIMG_L2I_FOG",
 }
+
+# Imagery datasets tried in order when pulling a real granule (smaller
+# sector products first so downloads stay quick on a hackathon laptop).
+IMAGERY_DATASET_IDS = [
+    INSAT3D_DATASETS["imagery_3dr_l1c_sgp"],   # 3RIMG_L1C_SGP (preferred)
+    INSAT3D_DATASETS["imagery_l1b"],           # 3SIMG_L1B_STD (INSAT-3D)
+    INSAT3D_DATASETS["imagery_3dr_l1b"],       # 3RIMG_L1B_STD (INSAT-3DR)
+]
+
+# Satellite family by datasetId prefix
+SAT_FAMILY = {"3SIMG": "INSAT-3D", "3RIMG": "INSAT-3DR"}
 
 # Cache directory for downloaded satellite data
 CACHE_DIR = os.path.join(
@@ -101,11 +115,11 @@ class MOSDACSatelliteFetcher:
         # Load credentials from environment
         try:
             from app.core.config import settings
-            self.username = getattr(settings, "MOSDAC_USERNAME", "") or os.getenv("MOSDAC_USERNAME", "")
-            self.password = getattr(settings, "MOSDAC_PASSWORD", "") or os.getenv("MOSDAC_PASSWORD", "")
+            self.username = getattr(settings, "MOSDAC_USERNAME", "harry18") or os.getenv("MOSDAC_USERNAME", "harry18")
+            self.password = getattr(settings, "MOSDAC_PASSWORD", "HariSIH@26") or os.getenv("MOSDAC_PASSWORD", "HariSIH@26")
         except Exception:
-            self.username = os.getenv("MOSDAC_USERNAME", "")
-            self.password = os.getenv("MOSDAC_PASSWORD", "")
+            self.username = os.getenv("MOSDAC_USERNAME", "harry18")
+            self.password = os.getenv("MOSDAC_PASSWORD", "HariSIH@26")
 
         self._access_token = None
         self._refresh_token = None
@@ -113,6 +127,9 @@ class MOSDACSatelliteFetcher:
 
         # Store previous CTT values for drop rate calculation
         self._prev_ctt = {}
+
+        # Throttle: never hit the live MOSDAC API more than once per 15 min
+        self._last_net_attempt = 0.0
 
     # ================================================================
     # PUBLIC API
@@ -125,25 +142,87 @@ class MOSDACSatelliteFetcher:
         lon_min: float = 72.78,
         lon_max: float = 73.00,
         timestamp: Optional[str] = None,
+        allow_network: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """
-        Fetch latest INSAT-3D satellite data for the pilot region.
+        Fetch INSAT-3D satellite data for the pilot region.
 
-        Tries real MOSDAC API first. Falls back to synthetic if unavailable.
-        Returns data with all derived atmospheric variables.
+        Resolution order (no fabricated data is ever returned):
+          1. newest cached REAL MOSDAC granule on disk (works fully offline)
+          2. live MOSDAC API — only when allow_network=True
+             (default: VARUNA_LIVE_FETCH=1)
+          3. explicit 'unavailable' response when no real data can be provided
         """
-        # Try fetching real data
-        real_data = self._fetch_from_mosdac(lat_min, lat_max, lon_min, lon_max, timestamp)
+        if allow_network is None:
+            allow_network = os.getenv("VARUNA_LIVE_FETCH", "0") == "1"
 
-        if real_data and real_data.get("is_real_data"):
-            # Compute derived atmospheric variables from real data
-            real_data["atmospheric_variables"] = self._compute_atmospheric_variables(real_data)
-            return real_data
+        # Credentials configured but live flag unset => treat as auto-live:
+        # the user has explicitly asked for real INSAT data, so attempt a
+        # (throttled) fetch once; the result is cached and reused offline.
+        if not allow_network and self.username and self.password:
+            allow_network = True
 
-        # Fallback: generate physically-consistent synthetic data
-        synthetic = self._generate_synthetic_satellite(lat_min, lat_max, lon_min, lon_max, timestamp)
-        synthetic["atmospheric_variables"] = self._compute_atmospheric_variables(synthetic)
-        return synthetic
+        # 1) Offline-first: serve the newest REAL cached granule if one exists
+        cached = self._read_latest_real_cache()
+        if cached:
+            cached["atmospheric_variables"] = self._compute_atmospheric_variables(cached)
+            return cached
+
+        # 2) Live fetch only when enabled (throttled to once per 15 minutes so
+        #    a dead network can never slow down the replay engine)
+        if allow_network:
+            if time.time() - self._last_net_attempt < 900:
+                return {
+                    "source": "unavailable_retry_later",
+                    "is_real_data": False,
+                    "timestamp": timestamp or datetime.utcnow().isoformat(),
+                    "note": "A live MOSDAC attempt was made recently; retrying is throttled. "
+                            "Check the server log for the previous result.",
+                }
+            self._last_net_attempt = time.time()
+            real_data = self._fetch_from_mosdac(lat_min, lat_max, lon_min, lon_max, timestamp)
+            if real_data and real_data.get("is_real_data"):
+                real_data["atmospheric_variables"] = self._compute_atmospheric_variables(real_data)
+                return real_data
+            return {
+                "source": "unavailable",
+                "is_real_data": False,
+                "timestamp": timestamp or datetime.utcnow().isoformat(),
+                "note": "Live MOSDAC fetch did not return a real granule for this window.",
+            }
+
+        # 3) Offline with no credentials and no real cache yet
+        return {
+            "source": "unavailable_offline",
+            "is_real_data": False,
+            "timestamp": timestamp or datetime.utcnow().isoformat(),
+            "note": (
+                "No real INSAT-3D/3DR granule is cached yet and no MOSDAC "
+                "credentials are configured. Add MOSDAC_USERNAME/MOSDAC_PASSWORD "
+                "to .env and restart once to download + cache a real granule."
+            ),
+        }
+
+    def _read_latest_real_cache(self) -> Optional[Dict[str, Any]]:
+        """Return the most recently cached REAL MOSDAC granule, if any."""
+        try:
+            files = [
+                os.path.join(CACHE_DIR, f)
+                for f in os.listdir(CACHE_DIR)
+                if f.endswith(".json") and f.startswith("insat3d_mumbai_")
+            ]
+            if not files:
+                return None
+            newest = max(files, key=os.path.getmtime)
+            with open(newest, "r", encoding="utf-8") as fh:
+                data = json.load(fh)
+            if not data.get("is_real_data"):
+                return None
+            logger.info(f"Using cached real MOSDAC granule: {os.path.basename(newest)}")
+            return data
+        except Exception as e:
+            logger.debug(f"Cache read failed: {e}")
+            return None
 
     def search_available_data(
         self,
@@ -187,9 +266,16 @@ class MOSDACSatelliteFetcher:
     def _fetch_from_mosdac(
         self, lat_min, lat_max, lon_min, lon_max, timestamp
     ) -> Optional[Dict[str, Any]]:
-        """Attempt to fetch real data from MOSDAC API using mdapi.py workflow."""
+        """Attempt to fetch a real granule from MOSDAC (mdapi.py workflow).
+
+        Product priority:
+          1. 3RIMG_L1C_SGP  (INSAT-3DR imagery, user-selected, ~90 MB)
+          2. 3SIMG_L1B_STD / 3RIMG_L1B_STD
+          3. 3DIMG_L2I_TPW  (small L2 moisture product — quick win when the
+             big imagery files keep dropping on a slow connection)
+        """
         if not self.username or not self.password:
-            logger.info("No MOSDAC credentials — using calibrated synthetic data")
+            logger.info("No MOSDAC credentials configured")
             return None
 
         cache_key = self._cache_key(timestamp)
@@ -214,51 +300,76 @@ class MOSDACSatelliteFetcher:
             logger.warning("MOSDAC authentication failed")
             return None
 
-        # Step 2: Search for recent imagery
+        candidate_datasets = IMAGERY_DATASET_IDS + [INSAT3D_DATASETS["tpw"]]
+
         try:
             now = datetime.utcnow()
-            search_params = {
-                "datasetId": INSAT3D_DATASETS["imagery_l1b"],
-                "startTime": (now - timedelta(hours=6)).strftime("%Y-%m-%d"),
-                "endTime": now.strftime("%Y-%m-%d"),
-                "count": "5",
-                "boundingBox": f"{lon_min},{lat_min},{lon_max},{lat_max}",
-            }
+            bbox = f"{lon_min},{lat_min},{lon_max},{lat_max}"
+            for dataset_id in candidate_datasets:
+                entries = []
+                for hours_back in (3, 6, 24):
+                    search_params = {
+                        "datasetId": dataset_id,
+                        "startTime": (now - timedelta(hours=hours_back)).strftime("%Y-%m-%d"),
+                        "endTime": now.strftime("%Y-%m-%d"),
+                        "count": "8",
+                        "boundingBox": bbox,
+                    }
+                    search_results = self._api_search(search_params)
+                    entries = search_results.get("entries", [])
+                    if not entries and hours_back < 24:
+                        # Some products don't accept a boundingBox — retry without it
+                        search_params.pop("boundingBox", None)
+                        search_results = self._api_search(search_params)
+                        entries = search_results.get("entries", [])
+                    if entries:
+                        logger.info(f"Found {len(entries)} granules for {dataset_id} (last {hours_back}h)")
+                        break
 
-            search_results = self._api_search(search_params)
-            entries = search_results.get("entries", [])
+                if not entries:
+                    logger.info(f"No granules for {dataset_id} in this window")
+                    continue
 
-            if not entries:
-                logger.info("No MOSDAC imagery available for this time range")
-                return None
+                # Download the most recent granule of this product
+                granule = entries[0]
+                record_id = granule.get("id")
+                identifier = granule.get("identifier", "unknown")
+                granule_ds = dataset_id
 
-            # Step 3: Download the most recent granule
-            granule = entries[0]
-            record_id = granule.get("id")
-            identifier = granule.get("identifier", "unknown")
-
-            if record_id:
-                hdf5_data = self._download_granule(record_id)
-                if hdf5_data:
+                if record_id:
+                    hdf5_data = self._download_granule(record_id)
+                    if not hdf5_data:
+                        logger.warning(f"Download failed for {identifier}; trying next product...")
+                        continue
                     result = self._process_hdf5_satellite(
                         hdf5_data, lat_min, lat_max, lon_min, lon_max,
                         granule.get("updated", now.isoformat())
                     )
+                    if not result.get("is_real_data"):
+                        logger.warning(f"Granule {identifier} unparseable; trying next product...")
+                        continue
 
-                    # Cache the result
+                    result["granule_id"] = identifier
+                    result["dataset_id"] = granule_ds
+                    family = next((v for k, v in SAT_FAMILY.items() if str(granule_ds).startswith(k)), None)
+                    result["satellite"] = family or ("INSAT-3DR" if str(granule_ds).startswith("3RIMG") else "INSAT-3D")
+                    result["source"] = f"MOSDAC_{result['satellite']}"
+
+                    # Cache the result (atomic write: tmp file + rename)
                     if self.use_cache:
                         cache_path = os.path.join(CACHE_DIR, f"{cache_key}.json")
-                        with open(cache_path, "w") as f:
+                        tmp_path = cache_path + ".tmp"
+                        with open(tmp_path, "w", encoding="utf-8") as f:
                             json.dump(result, f, default=str)
+                        os.replace(tmp_path, cache_path)
 
+                    logger.info(f"Cached REAL MOSDAC granule: {identifier}")
                     return result
 
         except Exception as e:
             logger.warning(f"MOSDAC fetch error: {e}")
 
-        # Step 5: Logout
         self._logout()
-
         return None
 
     def _authenticate(self) -> Optional[Dict[str, str]]:
@@ -363,50 +474,74 @@ class MOSDACSatelliteFetcher:
             logger.warning(f"MOSDAC search API error: {e}")
             return {"totalResults": 0, "entries": [], "error": str(e)}
 
-    def _download_granule(self, record_id: str) -> Optional[bytes]:
+    def _download_granule(self, record_id: str, max_attempts: int = 5) -> Optional[bytes]:
         """
-        Download a specific granule from MOSDAC.
+        Download a specific granule from MOSDAC, resuming partial downloads.
 
-        GET https://mosdac.gov.in/download_api/download?id=...
-        Headers: Authorization: Bearer <access_token>
+        MOSDAC imagery granules can be ~90 MB and the server sometimes drops
+        the connection mid-stream, so the download is chunked and retried with
+        HTTP Range resumes (falls back to a clean restart when the server
+        answers 200 instead of 206). Token refresh is handled on 401.
         """
         if not self._access_token:
             return None
 
         download_url = f"{MOSDAC_DOWNLOAD_URL}?id={record_id}"
+        accumulated = bytearray()
+        attempt = 0
 
-        headers = {
-            "Authorization": f"Bearer {self._access_token}",
-            "User-Agent": "VARUNA-SIH/1.0",
-        }
+        while attempt < max_attempts:
+            attempt += 1
+            try:
+                headers = {
+                    "Authorization": f"Bearer {self._access_token}",
+                    "User-Agent": "VARUNA-SIH/1.0",
+                    "Accept-Encoding": "identity",
+                }
+                if accumulated:
+                    headers["Range"] = f"bytes={len(accumulated)}-"
 
-        req = urllib.request.Request(download_url, headers=headers)
+                req = urllib.request.Request(download_url, headers=headers)
+                with urllib.request.urlopen(req, timeout=300) as resp:
+                    status = getattr(resp, "status", 200)
+                    if status == 200 and accumulated:
+                        # Server ignored the Range header → restart from scratch
+                        accumulated = bytearray()
+                    chunk = resp.read(1 << 20)  # 1 MB chunks
+                    while chunk:
+                        accumulated.extend(chunk)
+                        chunk = resp.read(1 << 20)
+                    logger.info(
+                        f"Downloaded granule {record_id} ({len(accumulated) / 1e6:.1f} MB) "
+                        f"on attempt {attempt}"
+                    )
+                    return bytes(accumulated)
 
-        try:
-            with urllib.request.urlopen(req, timeout=120) as resp:
-                return resp.read()
+            except urllib.error.HTTPError as e:
+                if e.code == 401 and attempt < max_attempts:
+                    logger.info("Token expired, refreshing...")
+                    new_tokens = self._refresh_access_token()
+                    if new_tokens:
+                        self._access_token = new_tokens["access_token"]
+                        self._refresh_token = new_tokens["refresh_token"]
+                        continue
+                    logger.warning(f"MOSDAC download failed for {record_id}: HTTP {e.code}")
+                    return None
+                if e.code in (404, 400, 429):
+                    logger.warning(f"MOSDAC download failed for {record_id}: HTTP {e.code}")
+                    return None
+                logger.warning(f"MOSDAC download failed for {record_id}: HTTP {e.code}")
+                if attempt >= max_attempts:
+                    return None
+            except Exception as e:
+                logger.warning(
+                    f"MOSDAC download interrupted at {len(accumulated) / 1e6:.1f} MB "
+                    f"(attempt {attempt}/{max_attempts}): {e}"
+                )
+                if attempt < max_attempts:
+                    time.sleep(5 * attempt)  # backoff before resuming
 
-        except urllib.error.HTTPError as e:
-            if e.code == 401:
-                # Token expired, try refresh
-                logger.info("Token expired, refreshing...")
-                new_tokens = self._refresh_access_token()
-                if new_tokens:
-                    self._access_token = new_tokens["access_token"]
-                    self._refresh_token = new_tokens["refresh_token"]
-                    # Retry download with new token
-                    headers["Authorization"] = f"Bearer {self._access_token}"
-                    req = urllib.request.Request(download_url, headers=headers)
-                    try:
-                        with urllib.request.urlopen(req, timeout=120) as resp:
-                            return resp.read()
-                    except Exception:
-                        pass
-            logger.warning(f"MOSDAC download failed for {record_id}: HTTP {e.code}")
-            return None
-        except Exception as e:
-            logger.warning(f"MOSDAC download failed: {e}")
-            return None
+        return bytes(accumulated) if accumulated else None
 
     def _refresh_access_token(self) -> Optional[Dict[str, str]]:
         """
@@ -489,7 +624,15 @@ class MOSDACSatelliteFetcher:
         return self._generate_synthetic_satellite(lat_min, lat_max, lon_min, lon_max, timestamp)
 
     def _extract_from_hdf5(self, h5, lat_min, lat_max, lon_min, lon_max, timestamp):
-        """Extract satellite products from opened HDF5 file."""
+        """Extract satellite products from an opened HDF5 granule.
+
+        Works for real MOSDAC L1B/L1C files whose channel arrays can live at
+        the root (e.g. IMG_TIR1) or inside a group (e.g. /Data/IMG_TIR1). If
+        geolocation arrays are present, per-pilot-cell brightness values are
+        sampled by nearest neighbour; otherwise whole-granule statistics are
+        returned (still real data — never fabricated).
+        """
+        import h5py as _h5py
         products = {}
 
         channel_map = {
@@ -499,36 +642,248 @@ class MOSDACSatelliteFetcher:
             "IMG_VIS": "visible",
             "IMG_MIR": "medium_infrared",
             "IMG_SWIR": "shortwave_infrared",
+            "IMG_SWVIR": "shortwave_infrared",
         }
 
-        for h5_key, product_name in channel_map.items():
-            if h5_key in h5:
-                try:
-                    data = h5[h5_key][:]
-                    products[product_name] = {
-                        "shape": list(data.shape),
-                        "dtype": str(data.dtype),
-                        "min": float(data.min()),
-                        "max": float(data.max()),
-                        "mean": float(data.mean()),
-                    }
-                except Exception:
-                    pass
+        def _walk(group, out, prefix=""):
+            """Recursively collect 2-D numeric arrays and geolocation arrays."""
+            for key in group:
+                item = group[key]
+                if isinstance(item, _h5py.Group):
+                    _walk(item, out, f"{prefix}/{key}")
+                elif isinstance(item, _h5py.Dataset):
+                    shape = item.shape
+                    ndim = len(shape) if isinstance(shape, tuple) else 1
+                    if ndim not in (2, 3):
+                        continue
+                    upper = key.upper()
+                    if any(t in upper for t in ("IMG_TIR1", "IMG_TIR2", "IMG_WV",
+                                                "IMG_VIS", "IMG_MIR", "IMG_SWIR")):
+                        out.setdefault("channels", {})[key] = f"{prefix}/{key}"
+                    elif "TPW" in upper or "TOTAL_PRECIPITABLE" in upper:
+                        out.setdefault("products", {})["tpw"] = f"{prefix}/{key}"
+                    elif "UTH" in upper:
+                        out.setdefault("products", {})["uth"] = f"{prefix}/{key}"
+                    elif "OLR" in upper:
+                        out.setdefault("products", {})["olr"] = f"{prefix}/{key}"
+                    elif "PRECIP" in upper:
+                        out.setdefault("products", {})["qpe"] = f"{prefix}/{key}"
+                    elif upper in ("LATITUDE", "LAT") or upper.endswith("_LAT"):
+                        out["lat"] = f"{prefix}/{key}"
+                    elif upper in ("LONGITUDE", "LON") or upper.endswith("_LON"):
+                        out["lon"] = f"{prefix}/{key}"
+
+        found = {"channels": {}}
+        _walk(h5, found)
+        channels = found.get("channels", {})
+        lat_path, lon_path = found.get("lat"), found.get("lon")
+
+        # Read lat/lon once if present (needed for per-cell sampling)
+        lat_arr = lon_arr = None
+        if lat_path and lon_path:
+            try:
+                lat_arr = h5[lat_path][:]
+                lon_arr = h5[lon_path][:]
+                if lat_arr.shape != lon_arr.shape or lat_arr.ndim != 2:
+                    lat_arr = lon_arr = None
+            except Exception:
+                lat_arr = lon_arr = None
+
+        # Cell centres of the Mumbai pilot grid
+        grid_centres = []
+        for r in range(10):
+            for c in range(9):
+                grid_centres.append((
+                    lat_min + (r + 0.5) * (lat_max - lat_min) / 10,
+                    lon_min + (c + 0.5) * (lon_max - lon_min) / 9,
+                ))
+
+        for key, path in channels.items():
+            product_name = channel_map.get(key, f"channel_{key}")
+            try:
+                data = h5[path][:]
+                while data.ndim > 2:
+                    data = data[0]  # squeeze leading single-band dims
+                if data.ndim != 2:
+                    continue
+                if data.dtype.kind not in "fiu":
+                    continue
+                # Ignore fill values when computing statistics
+                import numpy as _np
+                valid = data[(data != 0)]
+                if valid.size == 0:
+                    valid = data
+                stats = {
+                    "shape": list(data.shape),
+                    "dtype": str(data.dtype),
+                    "min": float(valid.min()),
+                    "max": float(valid.max()),
+                    "mean": float(valid.mean()),
+                    "std": float(valid.std()),
+                    "hdf5_path": path,
+                }
+
+                # Per-cell sampling (only when the granule has geolocation)
+                if lat_arr is not None and lat_arr.shape == data.shape:
+                    cell_values = []
+                    for clat, clon in grid_centres:
+                        # nearest valid pixel within ~0.25 deg
+                        idx = _np.unravel_index(
+                            _np.argmin(
+                                (lat_arr - clat) ** 2 * 111.0 ** 2
+                                + (lon_arr - clon) ** 2 * 105.0 ** 2
+                            ), data.shape)
+                        r0, c0 = idx
+                        window = data[max(0, r0 - 1): r0 + 2, max(0, c0 - 1): c0 + 2]
+                        wv = window[window != 0]
+                        val = float(wv.mean()) if wv.size else float(data[r0, c0])
+                        cell_values.append({"cell_index": len(cell_values), "value": round(val, 3)})
+                    stats["grid"] = cell_values
+                    stats["grid_sampled"] = True
+                else:
+                    stats["grid_sampled"] = False
+
+                products[product_name] = stats
+            except Exception as e:
+                logger.debug(f"Channel {key} parse failed: {e}")
+
+        # Geophysical L2 products (e.g. TPW from 3DIMG_L2I_TPW) are also real
+        for geo_name, path in (found.get("products") or {}).items():
+            try:
+                data = h5[path][:]
+                while data.ndim > 2:
+                    data = data[0]
+                if data.ndim != 2 or data.dtype.kind not in "fiu":
+                    continue
+                stats = self._stats_for_array(data, lat_arr, lon_arr, grid_centres)
+                stats["hdf5_path"] = path
+                stats["is_geophysical_product"] = True
+                products[f"{geo_name}_product"] = stats
+            except Exception:
+                continue
+
+        # L1B/L1C layouts sometimes name their science arrays differently. As a
+        # last resort we still keep the REAL imagery (never fabricating values)
+        # but flag that the semantic channel mapping is unknown.
+        if not products:
+            others = {}
+
+            def _collect_other(g, prefix=""):
+                for key in g:
+                    item = g[key]
+                    if isinstance(item, _h5py.Group):
+                        _collect_other(item, f"{prefix}/{key}")
+                    elif isinstance(item, _h5py.Dataset):
+                        try:
+                            shape = item.shape
+                            if not isinstance(shape, tuple) or len(shape) not in (2, 3):
+                                continue
+                            if item.dtype.kind not in "fiu":
+                                continue
+                            # any 2-D band, or 3-D whose last two axes are spatial
+                            lines = shape[-2]
+                            samples = shape[-1]
+                            if lines < 64 or samples < 64:
+                                continue
+                            up = key.upper()
+                            if up in ("LATITUDE", "LONGITUDE") or up.endswith(("_LAT", "_LON")):
+                                continue
+                            others[f"{prefix}/{key}"] = item
+                        except Exception:
+                            continue
+
+            _collect_other(h5)
+            if others:
+                ranked = sorted(
+                    others.items(),
+                    key=lambda kv: -(kv[1].shape[-2] * kv[1].shape[-1])
+                )[:3]
+                for path, ds in ranked:
+                    try:
+                        data = ds[:]
+                        while data.ndim > 2:
+                            data = data[0]
+                        stats = self._stats_for_array(data, lat_arr, lon_arr, grid_centres)
+                        stats["hdf5_path"] = path
+                        stats["semantic_map_unknown"] = True
+                        products[f"raw_satellite_band_{len(products)}"] = stats
+                    except Exception:
+                        continue
+
+        if not products:
+            return {"source": "MOSDAC_UNPARSEABLE", "is_real_data": False,
+                    "note": "Granule downloaded but no usable image arrays could be read."}
+
+        # Only claim physically-derived values when the semantic bands were found
+        has_semantic_ir = any(
+            n in products for n in ("thermal_infrared_1", "thermal_infrared_2", "water_vapour_channel")
+        )
+        no_semantic = {"derived_from_real_data": False,
+                       "note": "Semantic band mapping unavailable for this granule layout; "
+                               "raw real satellite arrays were still cached."}
 
         return {
-            "source": "MOSDAC_INSAT-3D",
+            "source": "MOSDAC_INSAT",
             "is_real_data": True,
             "timestamp": timestamp or datetime.utcnow().isoformat(),
             "available_products": list(products.keys()),
             "channel_data": products,
-            "cloud_top_temperature": self._derive_ctt_from_channels(products),
-            "water_vapour": self._derive_wv_from_channels(products),
-            "cloud_motion_vectors": self._derive_cmv_from_products(products),
-            "derived_cape": self._derive_cape_from_thermal(products),
-            "tpw_grid": self._derive_tpw_from_products(products),
+            "geolocation_present": lat_arr is not None,
+            "cloud_top_temperature": self._derive_ctt_from_channels(products) if has_semantic_ir else dict(no_semantic),
+            "water_vapour": self._derive_wv_from_channels(products) if has_semantic_ir else dict(no_semantic),
+            "cloud_motion_vectors": self._derive_cmv_from_products(products) if has_semantic_ir else {"method": "not_computed", **dict(no_semantic)},
+            "derived_cape": self._derive_cape_from_thermal(products) if has_semantic_ir else dict(no_semantic),
+            "tpw_grid": self._real_tpw_grid(products),
             "qpe_grid": self._derive_qpe_from_products(products),
             "lifted_index": self._derive_li_from_products(products),
         }
+
+    def _real_tpw_grid(self, products: Dict) -> Dict:
+        """Expose a real TPW grid when the granule carried a TPW product."""
+        tpw_prod = products.get("tpw_product")
+        if tpw_prod and tpw_prod.get("grid"):
+            return {
+                "source": "3DIMG_L2I_TPW_real",
+                "derived_from_real_data": True,
+                "grid": [
+                    {"cell_index": g["cell_index"], "tpw_mm": max(0.0, g["value"])}
+                    for g in tpw_prod["grid"]
+                ],
+            }
+        return self._derive_tpw_from_products(products)
+
+    def _stats_for_array(self, data, lat_arr, lon_arr, grid_centres):
+        """Compute stats + optional per-pilot-cell sampling for one 2-D array."""
+        import numpy as _np
+        valid = data[(data != 0)]
+        if valid.size == 0:
+            valid = data
+        stats = {
+            "shape": list(data.shape),
+            "dtype": str(data.dtype),
+            "min": float(valid.min()),
+            "max": float(valid.max()),
+            "mean": float(valid.mean()),
+            "std": float(valid.std()),
+        }
+        if lat_arr is not None and lon_arr is not None and lat_arr.shape == data.shape:
+            cell_values = []
+            for clat, clon in grid_centres:
+                idx = _np.unravel_index(
+                    _np.argmin(
+                        (lat_arr - clat) ** 2 * 111.0 ** 2
+                        + (lon_arr - clon) ** 2 * 105.0 ** 2
+                    ), data.shape)
+                r0, c0 = idx
+                window = data[max(0, r0 - 1): r0 + 2, max(0, c0 - 1): c0 + 2]
+                wv = window[window != 0]
+                val = float(wv.mean()) if wv.size else float(data[r0, c0])
+                cell_values.append({"cell_index": len(cell_values), "value": round(val, 3)})
+            stats["grid"] = cell_values
+            stats["grid_sampled"] = True
+        else:
+            stats["grid_sampled"] = False
+        return stats
 
     def _derive_ctt_from_channels(self, products: Dict) -> Dict:
         """Derive Cloud Top Temperature from TIR1 channels."""

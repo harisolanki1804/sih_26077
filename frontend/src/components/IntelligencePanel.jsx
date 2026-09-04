@@ -300,6 +300,10 @@ function WhyAlertSection({ aiData, selectedCell }) {
     'tidal_lock': '🌊 Tidal lock',
     'wind_shear': '💨 Wind shear',
     'drainage_distance': '🚰 Drain distance',
+    'integrated_water_vapor': '💦 Moisture column',
+    'convective_inhibition': '⛔ Storm cap',
+    'lifted_index': '🎈 Instability',
+    'ctt_drop_rate': '🥶 Cloud cooling',
   }
 
   const sorted = Object.entries(importanceDict)
