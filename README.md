@@ -111,7 +111,7 @@ VARUNA combines **9 AI/ML modules** with **physics-informed models** and **real-
 
 ### Data Generation Command
 ```bash
-cd data_pipeline && python generate_synthetic_data.py
+cd Backend/data_pipeline && python generate_synthetic_data.py
 ```
 
 This generates all datasets with:
@@ -133,14 +133,14 @@ This generates all datasets with:
 ### Regenerating Data
 ```bash
 # Regenerate all data from scratch
-cd data_pipeline && python generate_synthetic_data.py
+cd Backend/data_pipeline && python generate_synthetic_data.py
 
 # This produces:
-# data/feature_grid_timeseries.json    — 72 timesteps × 90 cells (7.6MB)
-# data/dem/mumbai_srtm_dem.json        — Elevation grid
-# data/rainfall/mumbai_historical_deluge.json — Rainfall timeseries
-# data/moisture_satellite/mumbai_satellite_moisture_proxy.json
-# data/raw/*                           — Raw source files
+# Backend/data/feature_grid_timeseries.json    — 72 timesteps × 90 cells (7.6MB)
+# Backend/data/dem/mumbai_srtm_dem.json        — Elevation grid
+# Backend/data/rainfall/mumbai_historical_deluge.json — Rainfall timeseries
+# Backend/data/moisture_satellite/mumbai_satellite_moisture_proxy.json
+# Backend/data/raw/*                           — Raw source files
 ```
 
 ---
@@ -261,7 +261,7 @@ sih_26077/
 ├── .env.example                       # Environment variable template
 ├── varuna.db                          # SQLite database (auto-created)
 │
-├── backend/
+├── Backend/
 │   ├── app/
 │   │   ├── main.py                    # FastAPI application entry
 │   │   ├── core/
@@ -310,45 +310,28 @@ sih_26077/
 │   │           ├── regions.py          # Region endpoints
 │   │           ├── health.py           # Health check
 │   │           └── routes.py           # Road network endpoints
-│   └── requirements.txt
+│   ├── requirements.txt
+│   ├── cache/                         # Runtime caches (IMDAA, MOSDAC, live data)
+│   ├── data/                          # ★ Datasets (feature grid, DEM, rainfall, raw)
+│   ├── data_pipeline/                 # Dataset generation + ML data prep
+│   ├── evaluation/                    # Evaluation metrics harness
+│   └── models/checkpoints/            # 7 trained PyTorch models
 │
-├── frontend/
-│   ├── index.html                     # HTML entry with Leaflet CDN
-│   ├── package.json
-│   ├── vite.config.js                 # Vite config with API proxy
-│   └── src/
-│       ├── main.jsx                   # React entry
-│       ├── App.jsx                    # Root layout + mode toggle
-│       ├── index.css                  # Global styles (dark theme)
-│       ├── components/
-│       │   ├── GeoMap.jsx             # Leaflet map with grid overlay
-│       │   ├── MapView.jsx            # Map container + legend
-│       │   └── IntelligencePanel.jsx  # Unified right panel
-│       └── utils/
-│           ├── api.js                 # API fetch utilities
-│           └── helpers.js             # Formatting helpers
-│
-├── data_pipeline/
-│   ├── generate_synthetic_data.py     # ★ Main data generator
-│   └── ml_data_prep.py               # PyTorch training pipeline
-│
-├── data/
-│   ├── feature_grid_timeseries.json   # ★ Main dataset (7.6MB)
-│   ├── pilot_mumbai_metadata.json     # Region metadata
-│   ├── dem/
-│   │   └── mumbai_srtm_dem.json       # Elevation grid
-│   ├── rainfall/
-│   │   └── mumbai_historical_deluge.json  # Rainfall timeseries
-│   ├── moisture_satellite/
-│   │   └── mumbai_satellite_moisture_proxy.json
-│   └── raw/
-│       ├── dem/mumbai_srtm_dem_raw.json
-│       ├── rainfall/mumbai_hourly_rainfall_raw.json
-│       ├── moisture/mumbai_soil_moisture_raw.json
-│       └── mumbai_pilot_metadata_raw.json
-│
-└── models/
-    └── checkpoints/                   # Saved PyTorch models (after training)
+└── Frontend/
+    ├── index.html                     # HTML entry with Leaflet CDN
+    ├── package.json
+    ├── vite.config.js                 # Vite config with API proxy
+    └── src/
+        ├── main.jsx                   # React entry
+        ├── App.jsx                    # Root layout + mode toggle
+        ├── index.css                  # Global styles (dark theme)
+        ├── components/
+        │   ├── GeoMap.jsx             # Leaflet map with grid overlay
+        │   ├── MapView.jsx            # Map container + legend
+        │   └── IntelligencePanel.jsx  # Unified right panel
+        └── utils/
+            ├── api.js                 # API fetch utilities
+            └── helpers.js             # Formatting helpers
 ```
 
 ---
@@ -413,16 +396,16 @@ python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
 # Install dependencies
-pip install -r backend/requirements.txt
+pip install -r Backend/requirements.txt
 
 # Regenerate synthetic data (optional, data is pre-generated)
-cd data_pipeline && python generate_synthetic_data.py && cd ..
+(cd Backend/data_pipeline && python generate_synthetic_data.py)
 
 # Initialize database
-cd backend && python -c "from app.core.database import init_db; init_db()"
+(cd Backend && python -c "from app.core.database import init_db; init_db()")
 
 # Seed database
-cd backend && python -c "
+cd Backend && python -c "
 from app.core.database import init_db, SessionLocal
 from app.services.seed_service import seed_database
 init_db()
@@ -430,16 +413,16 @@ db = SessionLocal()
 seed_database(db)
 db.close()
 print('Database seeded!')
-"
+)
 
 # Start backend server
-cd backend && python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+cd Backend && python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 ### 2. Frontend Setup
 ```bash
 # In a new terminal
-cd frontend
+cd Frontend
 
 # Install dependencies
 npm install
@@ -456,7 +439,7 @@ npm run dev
 ### 4. Quick Test
 ```bash
 # Start backend
-cd backend && python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+cd Backend && python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 # Test replay
 curl -X POST "http://127.0.0.1:8000/api/v1/replay/step?step_to=37"

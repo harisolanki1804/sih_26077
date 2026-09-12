@@ -75,3 +75,6 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Dependencies (node_modules should never be tracked)
+node_modules/

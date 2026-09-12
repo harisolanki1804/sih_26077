@@ -30,7 +30,7 @@ python -m venv .venv
 # source .venv/bin/activate  # Mac/Linux
 
 # Install backend dependencies
-cd backend
+cd Backend
 pip install -r requirements.txt
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 pip install shap
@@ -42,7 +42,7 @@ npm install
 
 ### 2. Configure MOSDAC Credentials
 
-Create/edit `backend/.env`:
+Create/edit `Backend/.env`:
 ```
 MOSDAC_USERNAME=your_username
 MOSDAC_PASSWORD=your_password
@@ -71,9 +71,9 @@ network; once the real granule is cached it is served offline forever.
 The dashboard INSAT-3D badge then shows **LIVE** — if the network is down it
 honestly shows `Offline · fetch once` / `Retrying…` instead of fake data.
 
-Start the backend from the **`backend/` folder** (so `.env` is read):
+Start the backend from the **`Backend/` folder** (so `.env` is read):
 ```bash
-cd backend
+cd Backend
 ../.venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 First-time granule downloads are ~90 MB; on a slow link the code auto-resumes
@@ -94,8 +94,8 @@ IMDAA is **not an API** — you download NetCDF files from the NCMRWF portal:
    files (temperature, humidity, U/V wind, geopotential)
 5. Place them in:
 ```
-backend/data/imdaa/single_level/IMDAA_*.nc
-backend/data/imdaa/pressure_level/IMDAA_*.nc
+Backend/cache/imdaa/single_level/IMDAA_*.nc
+Backend/cache/imdaa/pressure_level/IMDAA_*.nc
 ```
 6. Restart the backend — it auto-detects the files (`source: IMDAA_ACTUAL`).
    Until then, with `VARUNA_LIVE_FETCH=1`, the backend uses genuine Open-Meteo
@@ -109,13 +109,13 @@ pressure-level profiles only refine wind-shear. Skip that download if pressed.
 
 **Terminal 1 — Backend:**
 ```bash
-cd backend
+cd Backend
 .venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 **Terminal 2 — Frontend:**
 ```bash
-cd frontend
+cd Frontend
 npm run dev
 ```
 
@@ -218,7 +218,7 @@ curl -s -X POST "http://127.0.0.1:8000/api/v1/replay/step?step_to=36" | \
 All models are pre-trained. To retrain:
 
 ```bash
-cd backend
+cd Backend
 .venv/Scripts/python.exe -c "
 from app.services.ai.trainer import VARUNATrainer
 trainer = VARUNATrainer()
@@ -271,7 +271,7 @@ trainer.train_all(epochs=100, lr=0.001)
 
 ```
 sih_26077/
-├── backend/
+├── Backend/                      # All AI/ML + API code
 │   ├── app/
 │   │   ├── api/v1/endpoints/     # 47 REST API endpoints
 │   │   ├── services/
@@ -286,9 +286,12 @@ sih_26077/
 │   │   │   ├── realtime/         # Open-Meteo live data
 │   │   │   └── scenario/         # What-If engine
 │   │   └── schemas/              # Pydantic models
-│   ├── models/checkpoints/       # 7 trained PyTorch models
-│   └── evaluation/               # Evaluation metrics
-├── frontend/
+│   ├── cache/                    # Runtime caches (IMDAA, MOSDAC, live data)
+│   ├── data/                     # Datasets (feature grid, DEM, rainfall, raw)
+│   ├── data_pipeline/            # Dataset generation + ML data prep
+│   ├── evaluation/               # Evaluation metrics
+│   └── models/checkpoints/       # 7 trained PyTorch models
+├── Frontend/                     # React + Vite dashboard
 │   ├── src/
 │   │   ├── App.jsx               # Main layout
 │   │   ├── components/
@@ -298,10 +301,6 @@ sih_26077/
 │   │   │   └── IntelligencePanel.jsx  # Right panel
 │   │   └── utils/                # API client, helpers
 │   └── package.json
-├── data/
-│   ├── feature_grid_timeseries.json  # 72-hour Mumbai dataset
-│   ├── dem/                      # SRTM elevation data
-│   └── raw/                      # Raw weather data
 └── RUN_GUIDE.md                  # This file
 ```
 
@@ -311,8 +310,8 @@ sih_26077/
 
 | Issue | Solution |
 |-------|----------|
-| `ECONNREFUSED ::1:8000` | Start backend first: `cd backend && uvicorn app.main:app --port 8000` |
-| `MOSDAC auth failed` | Check username/password in `backend/.env` |
+| `ECONNREFUSED ::1:8000` | Start backend first: `cd Backend && uvicorn app.main:app --port 8000` |
+| `MOSDAC auth failed` | Check username/password in `Backend/.env` |
 | `Open-Meteo 400 error` | Already fixed — uses valid parameters only |
 | `Open-Meteo 429 error` | Rate limited — wait 5 minutes |
 | `Model not loading` | Run training command above |
