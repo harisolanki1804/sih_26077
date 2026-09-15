@@ -182,9 +182,10 @@ class FusedFeaturesResult(BaseModel):
     model_config = ConfigDict(extra="ignore")
     fusion_method: str
     data_sources: List[str]
-    source_contributions: Dict[str, float]
+    source_contributions: Optional[Dict[str, float]] = None
     global_agreement_score: float
     per_cell_fusion: List[FusedCellResult]
+    inference_mode: Optional[str] = None
 
 
 class CrowdReportClassification(BaseModel):
@@ -193,10 +194,15 @@ class CrowdReportClassification(BaseModel):
     classification: str
     confidence: float
     detected_location: Optional[str] = None
-    confirm_score: int
-    deny_score: int
-    unrelated_score: int
-    actionable: bool
+    confirm_score: int = 0
+    deny_score: int = 0
+    unrelated_score: int = 0
+    actionable: bool = False
+    probabilities: Optional[Dict[str, float]] = None
+    inference_mode: Optional[str] = None
+    flagged_for_retraining: Optional[bool] = False
+    model_risk_at_location: Optional[float] = None
+    agrees_with_model: Optional[bool] = None
 
 
 class CrowdReportRequest(BaseModel):
