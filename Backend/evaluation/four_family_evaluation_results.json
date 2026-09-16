@@ -1,0 +1,236 @@
+{
+  "split": {
+    "type": "frozen_time_based",
+    "train_calibration_timesteps": 50,
+    "test_timesteps": 22,
+    "test_timesteps_range": "51 to 72"
+  },
+  "family1_classification": {
+    "Flood": {
+      "+2h": {
+        "POD": 0.0,
+        "FAR": 0.0,
+        "CSI": 0.0,
+        "Accuracy": 100.0,
+        "TP": 0,
+        "FP": 0,
+        "FN": 0,
+        "TN": 22
+      },
+      "+4h": {
+        "POD": 0.0,
+        "FAR": 0.0,
+        "CSI": 0.0,
+        "Accuracy": 100.0,
+        "TP": 0,
+        "FP": 0,
+        "FN": 0,
+        "TN": 22
+      },
+      "+6h": {
+        "POD": 0.0,
+        "FAR": 0.0,
+        "CSI": 0.0,
+        "Accuracy": 100.0,
+        "TP": 0,
+        "FP": 0,
+        "FN": 0,
+        "TN": 22
+      }
+    },
+    "Lightning": {
+      "+2h": {
+        "POD": 0.0,
+        "FAR": 0.0,
+        "CSI": 0.0,
+        "Accuracy": 100.0,
+        "TP": 0,
+        "FP": 0,
+        "FN": 0,
+        "TN": 22
+      },
+      "+4h": {
+        "POD": 0.0,
+        "FAR": 0.0,
+        "CSI": 0.0,
+        "Accuracy": 100.0,
+        "TP": 0,
+        "FP": 0,
+        "FN": 0,
+        "TN": 22
+      },
+      "+6h": {
+        "POD": 0.0,
+        "FAR": 0.0,
+        "CSI": 0.0,
+        "Accuracy": 100.0,
+        "TP": 0,
+        "FP": 0,
+        "FN": 0,
+        "TN": 22
+      }
+    },
+    "Wind": {
+      "+2h": {
+        "POD": 100.0,
+        "FAR": 70.6,
+        "CSI": 29.4,
+        "Accuracy": 45.5,
+        "TP": 5,
+        "FP": 12,
+        "FN": 0,
+        "TN": 5
+      },
+      "+4h": {
+        "POD": 100.0,
+        "FAR": 66.7,
+        "CSI": 33.3,
+        "Accuracy": 45.5,
+        "TP": 6,
+        "FP": 12,
+        "FN": 0,
+        "TN": 4
+      },
+      "+6h": {
+        "POD": 100.0,
+        "FAR": 64.7,
+        "CSI": 35.3,
+        "Accuracy": 50.0,
+        "TP": 6,
+        "FP": 11,
+        "FN": 0,
+        "TN": 5
+      }
+    },
+    "Heat": {
+      "+2h": {
+        "POD": 0.0,
+        "FAR": 0.0,
+        "CSI": 0.0,
+        "Accuracy": 100.0,
+        "TP": 0,
+        "FP": 0,
+        "FN": 0,
+        "TN": 22
+      },
+      "+4h": {
+        "POD": 0.0,
+        "FAR": 0.0,
+        "CSI": 0.0,
+        "Accuracy": 100.0,
+        "TP": 0,
+        "FP": 0,
+        "FN": 0,
+        "TN": 22
+      },
+      "+6h": {
+        "POD": 0.0,
+        "FAR": 0.0,
+        "CSI": 0.0,
+        "Accuracy": 100.0,
+        "TP": 0,
+        "FP": 0,
+        "FN": 0,
+        "TN": 22
+      }
+    },
+    "Air Quality": {
+      "+2h": {
+        "POD": 0.0,
+        "FAR": 0.0,
+        "CSI": 0.0,
+        "Accuracy": 100.0,
+        "TP": 0,
+        "FP": 0,
+        "FN": 0,
+        "TN": 22
+      },
+      "+4h": {
+        "POD": 0.0,
+        "FAR": 0.0,
+        "CSI": 0.0,
+        "Accuracy": 100.0,
+        "TP": 0,
+        "FP": 0,
+        "FN": 0,
+        "TN": 22
+      },
+      "+6h": {
+        "POD": 0.0,
+        "FAR": 0.0,
+        "CSI": 0.0,
+        "Accuracy": 100.0,
+        "TP": 0,
+        "FP": 0,
+        "FN": 0,
+        "TN": 22
+      }
+    }
+  },
+  "family2_regression": {
+    "flood_depth_cm": {
+      "RMSE": 2.29,
+      "MAE": 1.96,
+      "R2": -0.23
+    },
+    "rainfall_mm_hr": {
+      "RMSE": 2.43,
+      "MAE": 1.33,
+      "R2": -1.585
+    },
+    "risk_severity_score": {
+      "RMSE": 18.16,
+      "MAE": 16.64,
+      "R2": -0.124
+    }
+  },
+  "family3_probabilistic": {
+    "brier_score": 0.1278,
+    "expected_calibration_error_ece": 0.2381,
+    "reliability_bins": [
+      {
+        "bin": "0.0-0.2",
+        "count": 0,
+        "avg_confidence": 0.1,
+        "observed_frequency": 0.0,
+        "gap": 0.0
+      },
+      {
+        "bin": "0.2-0.4",
+        "count": 1980,
+        "avg_confidence": 0.315,
+        "observed_frequency": 0.077,
+        "gap": 0.238
+      },
+      {
+        "bin": "0.4-0.6",
+        "count": 0,
+        "avg_confidence": 0.5,
+        "observed_frequency": 0.0,
+        "gap": 0.0
+      },
+      {
+        "bin": "0.6-0.8",
+        "count": 0,
+        "avg_confidence": 0.7,
+        "observed_frequency": 0.0,
+        "gap": 0.0
+      },
+      {
+        "bin": "0.8-1.0",
+        "count": 0,
+        "avg_confidence": 0.9,
+        "observed_frequency": 0.0,
+        "gap": 0.0
+      }
+    ],
+    "conformal_coverage_pct": 99.9,
+    "conformal_quantile_q": 14.85
+  },
+  "family4_operational": {
+    "lead_time_to_first_alert_hours": 0,
+    "false_alarms_per_week": 0.0,
+    "evacuation_detour_overhead_pct": 4.9,
+    "peak_risk_timestep": 0
+  }
+}

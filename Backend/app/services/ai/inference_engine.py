@@ -875,14 +875,23 @@ class VARUNAInferenceEngine:
                 "dominant_source": source_names[signals.index(max(signals))],
             })
 
+        n_fused = max(1, len(fused_cells))
         avg_agreement = round(
-            sum(f["cross_source_agreement"] for f in fused_cells) / max(1, len(fused_cells)),
+            sum(f["cross_source_agreement"] for f in fused_cells) / n_fused,
             3,
         )
+
+        source_contributions = {
+            "insat3d_satellite": round(sum(f["fused_risk_vector"][0] for f in fused_cells) / n_fused, 4),
+            "imdaa_reanalysis": round(sum(f["fused_risk_vector"][1] for f in fused_cells) / n_fused, 4),
+            "srtm_dem": round(sum(f["fused_risk_vector"][2] for f in fused_cells) / n_fused, 4),
+            "qpe_rainfall": round(sum(f["fused_risk_vector"][3] for f in fused_cells) / n_fused, 4),
+        }
 
         return {
             "fusion_method": "cross_source_value_fusion",
             "data_sources": source_names,
+            "source_contributions": source_contributions,
             "global_agreement_score": avg_agreement,
             "per_cell_fusion": fused_cells,
             "inference_mode": "deterministic_source_alignment",
@@ -1330,7 +1339,7 @@ class VARUNAInferenceEngine:
             drivers = []
 
             if rain > 30:
-                weight = feature_importance["rainfall_intensity"]
+                weight = feature_importance.get("rainfall_intensity", 0.25)
                 drivers.append({
                     "factor": "High Rainfall Intensity",
                     "value": f"{rain} mm/hr",
@@ -1339,7 +1348,7 @@ class VARUNAInferenceEngine:
                 })
 
             if cape > 1500:
-                weight = feature_importance["cape_instability"]
+                weight = feature_importance.get("cape_instability", 0.18)
                 drivers.append({
                     "factor": "Convective Instability (CAPE)",
                     "value": f"{cape} J/kg",
@@ -1348,7 +1357,7 @@ class VARUNAInferenceEngine:
                 })
 
             if ctt < -45:
-                weight = feature_importance["cloud_top_temperature"]
+                weight = feature_importance.get("cloud_top_temperature", 0.15)
                 drivers.append({
                     "factor": "Cold Cloud-Top Temperature",
                     "value": f"{ctt}°C",
@@ -1357,7 +1366,7 @@ class VARUNAInferenceEngine:
                 })
 
             if soil > 75:
-                weight = feature_importance["soil_saturation"]
+                weight = feature_importance.get("soil_saturation", 0.12)
                 drivers.append({
                     "factor": "Soil Super-Saturation",
                     "value": f"{soil}%",
@@ -1366,7 +1375,7 @@ class VARUNAInferenceEngine:
                 })
 
             if elev < 5:
-                weight = feature_importance["elevation_depression"]
+                weight = feature_importance.get("elevation_depression", 0.10)
                 drivers.append({
                     "factor": "Low-Elevation Depression",
                     "value": f"{elev}m MSL",
@@ -1375,7 +1384,7 @@ class VARUNAInferenceEngine:
                 })
 
             if is_high_tide and tide_height > 4:
-                weight = feature_importance["tidal_lock"]
+                weight = feature_importance.get("tidal_lock", 0.10)
                 drivers.append({
                     "factor": "High Tide Drainage Lockout",
                     "value": f"{tide_height}m surge",
@@ -1553,36 +1562,7 @@ class VARUNAInferenceEngine:
         import torch
         from app.services.ai.data_loader import tokenize_crowd_report
 
-        # Use trained model if available
-        if self._use_torch and "crowd_nlp" in self._torch_models:
-            try:
-                model = self._torch_models["crowd_nlp"]
-                tokens = tokenize_crowd_report(report_text, max_len=128)
-                X = torch.tensor([tokens], dtype=torch.long)
-                with torch.no_grad():
-                    logits = model(X)
-                    probs = torch.softmax(logits, dim=-1).squeeze()
-                    pred_class = int(probs.argmax())
-                    confidence = float(probs.max())
-
-                class_names = ["CONFIRMS_FLOOD_ZONE", "DENIES_FLOOD_ZONE", "UNRELATED"]
-                classification = class_names[pred_class]
-
-                return {
-                    "report_text": report_text[:200],
-                    "classification": classification,
-                    "confidence": round(confidence, 3),
-                    "inference_mode": "trained_neural_network",
-                    "probabilities": {
-                        "confirm": round(float(probs[0]), 3),
-                        "deny": round(float(probs[1]), 3),
-                        "unrelated": round(float(probs[2]), 3),
-                    },
-                }
-            except Exception as e:
-                logger.debug(f"Crowd NLP model failed: {e}")
-
-        # Keyword-based fallback
+        # Extract keyword scores and location for all classification paths
         text_lower = report_text.lower()
 
         confirm_keywords = [
@@ -1602,6 +1582,52 @@ class VARUNAInferenceEngine:
         deny_score = sum(1 for kw in deny_keywords if kw in text_lower)
         unrelated_score = sum(1 for kw in unrelated_keywords if kw in text_lower)
 
+        location = None
+        mumbai_areas = [
+            "bandra", "andheri", "kurla", "dadar", "lower parel",
+            "mahalaxmi", "worli", "sion", "ghatkopar", "mulund",
+            "thane", "dharavi", "matunga", "phool mandi", "sion",
+        ]
+        for area in mumbai_areas:
+            if area in text_lower:
+                location = area
+                break
+
+        # Use trained model if available
+        if self._use_torch and "crowd_nlp" in self._torch_models:
+            try:
+                model = self._torch_models["crowd_nlp"]
+                tokens = tokenize_crowd_report(report_text, max_len=128)
+                X = torch.tensor([tokens], dtype=torch.long)
+                with torch.no_grad():
+                    logits = model(X)
+                    probs = torch.softmax(logits, dim=-1).squeeze()
+                    pred_class = int(probs.argmax())
+                    confidence = float(probs.max())
+
+                class_names = ["CONFIRMS_FLOOD_ZONE", "DENIES_FLOOD_ZONE", "UNRELATED"]
+                classification = class_names[pred_class]
+
+                return {
+                    "report_text": report_text[:200],
+                    "classification": classification,
+                    "confidence": round(confidence, 3),
+                    "detected_location": location,
+                    "confirm_score": confirm_score,
+                    "deny_score": deny_score,
+                    "unrelated_score": unrelated_score,
+                    "actionable": classification != "UNRELATED" and confidence > 0.5,
+                    "inference_mode": "trained_neural_network",
+                    "probabilities": {
+                        "confirm": round(float(probs[0]), 3),
+                        "deny": round(float(probs[1]), 3),
+                        "unrelated": round(float(probs[2]), 3),
+                    },
+                }
+            except Exception as e:
+                logger.debug(f"Crowd NLP model failed: {e}")
+
+        # Keyword-based fallback
         total = confirm_score + deny_score + unrelated_score + 1e-8
 
         if confirm_score > deny_score and confirm_score > unrelated_score:
@@ -1613,18 +1639,6 @@ class VARUNAInferenceEngine:
         else:
             classification = "UNRELATED"
             confidence = min(0.8, unrelated_score / total + 0.2)
-
-        # Geotag if coordinates can be extracted
-        location = None
-        mumbai_areas = [
-            "bandra", "andheri", "kurla", "dadar", "lower parel",
-            "mahalaxmi", "worli", "sion", "ghatkopar", "mulund",
-            "thane", "dharavi", "matunga", "phool mandi", "sion",
-        ]
-        for area in mumbai_areas:
-            if area in text_lower:
-                location = area
-                break
 
         return {
             "report_text": report_text[:200],
