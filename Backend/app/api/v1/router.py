@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from app.api.v1.endpoints import health, regions, features, events, alerts, replay, raw_data
-from app.api.v1.endpoints import ai_pipeline, innovations, realtime, routes
+from app.api.v1.endpoints import ai_pipeline, innovations, realtime, routes, metrics
 
 api_router = APIRouter()
 
@@ -15,3 +15,4 @@ api_router.include_router(ai_pipeline.router, prefix="/ai", tags=["AI/ML Inferen
 api_router.include_router(innovations.router, prefix="/innovations", tags=["🚀 Innovation Modules (Satellite, PINN, Evacuation, Scenarios, Edge)"])
 api_router.include_router(realtime.router, prefix="/realtime", tags=["📡 Real-Time Data (India-Wide)"])
 api_router.include_router(routes.router, prefix="/routes", tags=["🗺️ Evacuation Route Planner"])
+api_router.include_router(metrics.router, prefix="/metrics", tags=["📊 Evaluation Metrics & Model Skill"])

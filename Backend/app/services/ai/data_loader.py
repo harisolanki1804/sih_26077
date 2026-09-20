@@ -21,39 +21,17 @@ except ImportError:
     TORCH_AVAILABLE = False
 
 from app.core.config import settings
+from app.services.ai.feature_contract import (
+    CANONICAL_FEATURES,
+    TARGET_COLUMNS as CONTRACT_TARGET_COLUMNS,
+    resolve_feature,
+    resolve_target,
+    validate_feature_window,
+)
 
-
-# Feature columns in order (must match model_architectures input dims)
-# Includes ALL atmospheric variables from the problem statement:
-# Moisture (IWV, rainfall, soil moisture)
-# Instability (CAPE, CIN, CTT, CTT drop rate, lifted index)
-# Kinematics (wind speed/dir, U/V, shear, convergence)
-# Topography (elevation, slope, drainage, runoff)
-NUMERIC_FEATURES = [
-    # Moisture (The Fuel)
-    "rainfall_1h_mm", "rainfall_3h_mm", "rainfall_6h_mm", "rainfall_24h_mm",
-    "soil_moisture_pct", "soil_saturation_factor",
-    "iwv_mm",  # Integrated Water Vapor from WV channel
-    # Instability (The Energy)
-    "cape_instability_jkg", "cin_jkg", "lifted_index",
-    "cloud_top_temp_celsius", "ctt_drop_rate_c_per_hr",
-    # Kinematics & Lift (The Trigger)
-    "wind_speed_10m_kmh", "wind_direction_10m_deg",
-    "u_wind_ms", "v_wind_ms", "wind_gusts_kmh",
-    "vertical_wind_shear_ms", "low_level_convergence",
-    # Topography (The Flood Catalyst)
-    "elevation_m", "slope_deg", "runoff_coefficient",
-    "effective_runoff_mm_hr", "drainage_outfall_dist_m",
-    "retention_index", "tidal_backwater_factor",
-]
-
-TARGET_COLUMNS = [
-    "target_observed_flood_depth_cm",
-    "target_severity_class",
-    "target_flash_flood_flag",
-    "target_cloudburst_flag",
-    "target_waterlogging_flag",
-]
+# Feature columns in order (sourced from canonical feature contract)
+NUMERIC_FEATURES: List[str] = list(CANONICAL_FEATURES)
+TARGET_COLUMNS: List[str] = list(CONTRACT_TARGET_COLUMNS)
 
 # Grid dimensions for Mumbai pilot
 GRID_ROWS = 10   # lat range: 18.98 to 19.16
@@ -129,13 +107,19 @@ class VARUNADataset(Dataset):
         self.forecast_horizon = forecast_horizon
         self.normalize = normalize
 
+        # Validate feature contract
+        report = validate_feature_window(self.timesteps, label="VARUNADataset")
+        if not report.ok:
+            import logging
+            logging.getLogger(__name__).warning("Feature contract validation warnings:\n%s", report.summary())
+
         # Build feature matrix: (T, N_cells, N_features)
         self.features = self._build_feature_matrix()
         self.targets = self._build_target_matrix()
 
     def _extract_cell_features(self, cell: Dict[str, Any]) -> List[float]:
-        """Extract numeric features from a single grid cell."""
-        return [cell.get(f, 0.0) for f in NUMERIC_FEATURES]
+        """Extract numeric features from a single grid cell honoring contract aliases."""
+        return [float(resolve_feature(cell, f, 0.0) or 0.0) for f in NUMERIC_FEATURES]
 
     def _build_feature_matrix(self) -> "torch.Tensor":
         T = len(self.timesteps)
@@ -162,7 +146,7 @@ class VARUNADataset(Dataset):
         matrix = torch.zeros(T, N, TGT)
         for t, ts in enumerate(self.timesteps):
             for n, cell in enumerate(ts["features"]):
-                targets = [cell.get(tc, 0.0) for tc in TARGET_COLUMNS]
+                targets = [float(resolve_target(cell, tc, 0.0) or 0.0) for tc in TARGET_COLUMNS]
                 matrix[t, n] = torch.tensor(targets, dtype=torch.float32)
         return matrix
 

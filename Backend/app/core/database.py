@@ -2,6 +2,7 @@ import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from app.core.config import settings
+from app.core.timeline_config import EVENT_CODE, EVENT_START_DT
 
 logger = logging.getLogger("VARUNA.Database")
 
@@ -82,20 +83,20 @@ def seed_db():
         else:
             region = existing_region
 
-        # ── 2005 Mumbai Deluge Case-Study Event ─────────────────────
+        # ── Mumbai Deluge Case-Study Event ──────────────────────────
         if not db.query(RiskEvent).filter(
-            RiskEvent.event_code == "EVT-BOM-20240726-DELUGE"
+            RiskEvent.event_code == EVENT_CODE
         ).first():
             event = RiskEvent(
                 id=str(uuid.uuid4()),
                 region_id=region.id,
-                event_code="EVT-BOM-20240726-DELUGE",
+                event_code=EVENT_CODE,
                 title="Mumbai Monsoon Cloudburst — Mithi Basin Deluge (Case Study)",
                 description=(
                     "72-hour synthetic replay calibrated to the July 2005 Mumbai deluge "
                     "(944 mm in 24 hrs). Used for Digital Twin demonstration."
                 ),
-                start_time=datetime(2024, 7, 26, 0, 0, 0),
+                start_time=EVENT_START_DT,
                 severity_level=SeverityLevel.CRITICAL.value,
                 status=EventStatus.MONITORING.value,
                 peak_rainfall_rate_mm_hr=120.0,

@@ -3,6 +3,7 @@ import json
 from typing import Dict, Any, List
 from fastapi import APIRouter, HTTPException, status
 from app.core.config import settings
+from app.core.timeline_config import EVENT_START, EVENT_END
 
 router = APIRouter()
 
@@ -50,8 +51,8 @@ def get_raw_catalog() -> Dict[str, Any]:
 
 @router.get("/fetch-dynamic", summary="Dynamically Fetch Historical Meteorological Data on Demand")
 def fetch_dynamic_raw_data(
-    start_date: str = "2024-07-26",
-    end_date: str = "2024-07-28",
+    start_date: str = EVENT_START,
+    end_date: str = EVENT_END,
     latitude: float = 19.07,
     longitude: float = 72.88
 ) -> Dict[str, Any]:

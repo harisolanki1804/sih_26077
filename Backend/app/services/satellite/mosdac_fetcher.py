@@ -39,6 +39,7 @@ import os
 import io
 import json
 import math
+import re
 import time
 import logging
 import urllib.request
@@ -88,6 +89,33 @@ SAT_FAMILY = {"3SIMG": "INSAT-3D", "3RIMG": "INSAT-3DR"}
 CACHE_DIR = os.path.join(
     os.path.dirname(__file__), "..", "..", "..", "cache", "satellite_cache"
 )
+
+
+def _mosdac_date(value: Any, default: datetime) -> str:
+    """Normalise a time argument to the date-only format MOSDAC accepts.
+
+    Accepts ``datetime``, ``date``, or a string in any of the forms seen in
+    this codebase; anything unusable falls back to ``default``. The MOSDAC
+    catalog endpoint only accepts ``YYYY-MM-DD``.
+    """
+    if value is None:
+        return default.strftime("%Y-%m-%d")
+    if isinstance(value, datetime):
+        return value.strftime("%Y-%m-%d")
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return default.strftime("%Y-%m-%d")
+        # Already date-only.
+        match = re.match(r"^(\d{4}-\d{2}-\d{2})", text)
+        if match:
+            return match.group(1)
+        for fmt in ("%Y/%m/%d", "%d-%m-%Y", "%Y%m%d"):
+            try:
+                return datetime.strptime(text[:10], fmt).strftime("%Y-%m-%d")
+            except ValueError:
+                continue
+    return default.strftime("%Y-%m-%d")
 
 
 class MOSDACSatelliteFetcher:
@@ -243,11 +271,18 @@ class MOSDACSatelliteFetcher:
             if not token:
                 return {"error": "Authentication failed", "available": False}
 
-            # Use the correct MOSDAC search API
+            # Use the correct MOSDAC search API.
+            #
+            # startTime/endTime must be DATE ONLY (``YYYY-MM-DD``). The catalog
+            # endpoint rejects any datetime form with HTTP 400 "Bad Input
+            # Value": it accepts neither "2024-07-26 00:00:00" nor ISO-8601
+            # with T/Z/offset. Passing a date string through unchanged is safe.
             params = {
                 "datasetId": dataset_id,
-                "startTime": start_time or (datetime.utcnow() - timedelta(hours=6)).strftime("%Y-%m-%d"),
-                "endTime": end_time or datetime.utcnow().strftime("%Y-%m-%d"),
+                "startTime": _mosdac_date(
+                    start_time, (datetime.utcnow() - timedelta(hours=6))
+                ),
+                "endTime": _mosdac_date(end_time, datetime.utcnow()),
                 "count": str(min(count, 100)),
                 "boundingBox": bounding_box,
             }
@@ -442,7 +477,10 @@ class MOSDACSatelliteFetcher:
 
         GET https://mosdac.gov.in/apios/datasets.json?datasetId=...&startTime=...
         """
-        query_string = "&".join(f"{k}={v}" for k, v in params.items() if v)
+        # URL-encode the parameters: MOSDAC timestamps contain spaces
+        # ("2024-07-26 00:00:00"), which urllib.request rejects outright if the
+        # query string is assembled by hand.
+        query_string = urllib.parse.urlencode({k: v for k, v in params.items() if v})
         search_url = f"{MOSDAC_SEARCH_URL}?{query_string}"
 
         headers = {
@@ -469,6 +507,37 @@ class MOSDACSatelliteFetcher:
                     "entries": entries if isinstance(entries, list) else [],
                     "search_params": params,
                 }
+
+        except urllib.error.HTTPError as e:
+            body = ""
+            try:
+                body = e.read().decode("utf-8", "replace")
+            except Exception:
+                pass
+            lowered = body.lower()
+
+            # HTTP 500 + "Data unavailable for given parameters" is the API's
+            # way of saying "the query was valid, there is simply nothing for
+            # this dataset/window". Treat it as an empty result set so callers
+            # can distinguish 'no coverage' from 'request failed'.
+            if e.code >= 500 and "data unavailable" in lowered:
+                return {
+                    "totalResults": 0,
+                    "totalSizeMB": 0,
+                    "entries": [],
+                    "search_params": params,
+                    "empty_reason": "no_data_for_window",
+                }
+
+            message = body.strip() or f"HTTP {e.code}"
+            logger.warning(f"MOSDAC search API error: HTTP {e.code} {message[:200]}")
+            return {
+                "totalResults": 0,
+                "entries": [],
+                "error": message[:300],
+                "http_status": e.code,
+                "search_params": params,
+            }
 
         except Exception as e:
             logger.warning(f"MOSDAC search API error: {e}")
@@ -542,6 +611,38 @@ class MOSDACSatelliteFetcher:
                     time.sleep(5 * attempt)  # backoff before resuming
 
         return bytes(accumulated) if accumulated else None
+
+    def download_granule(self, record_id: str, dest_path: Optional[str] = None) -> Optional[str]:
+        """Download a specific MOSDAC granule and write it to disk as an HDF5 file.
+
+        Args:
+            record_id: MOSDAC granule record ID.
+            dest_path: Optional destination file path. If None, saves into
+                `Backend/cache/satellite_raw/{record_id}.h5`.
+
+        Returns:
+            The path to the local .h5 file if successful, None otherwise.
+        """
+        if not self._access_token:
+            self._authenticate()
+
+        raw_bytes = self._download_granule(record_id)
+        if not raw_bytes:
+            return None
+
+        if dest_path is None:
+            from app.core.config import settings  # local import: avoids cycles at module load
+
+            cache_raw_dir = os.path.join(settings.DATA_DIR, "..", "cache", "satellite_raw")
+            os.makedirs(cache_raw_dir, exist_ok=True)
+            dest_path = os.path.join(cache_raw_dir, f"{record_id}.h5")
+        else:
+            os.makedirs(os.path.dirname(os.path.abspath(dest_path)), exist_ok=True)
+
+        with open(dest_path, "wb") as f:
+            f.write(raw_bytes)
+        logger.info(f"Saved granule {record_id} to {dest_path}")
+        return dest_path
 
     def _refresh_access_token(self) -> Optional[Dict[str, str]]:
         """
@@ -837,6 +938,99 @@ class MOSDACSatelliteFetcher:
             "qpe_grid": self._derive_qpe_from_products(products),
             "lifted_index": self._derive_li_from_products(products),
         }
+
+    def map_to_varuna_grid(
+        self,
+        h5_file_path: str,
+        lat_min: float = 18.88,
+        lat_max: float = 19.28,
+        lon_min: float = 72.75,
+        lon_max: float = 73.05,
+    ) -> List[float]:
+        """Sample the 90 Mumbai pilot grid centers from an HDF5 file.
+
+        Args:
+            h5_file_path: Path to local HDF5 file (.h5)
+            lat_min, lat_max, lon_min, lon_max: Mumbai bounding box
+
+        Returns:
+            List[float] of length 90 (10 rows x 9 columns).
+        """
+        import h5py
+        import numpy as np
+
+        grid_centres = []
+        for r in range(10):
+            for c in range(9):
+                grid_centres.append((
+                    lat_min + (r + 0.5) * (lat_max - lat_min) / 10.0,
+                    lon_min + (c + 0.5) * (lon_max - lon_min) / 9.0,
+                ))
+
+        with h5py.File(h5_file_path, "r") as h5:
+            primary_data = None
+            lat_arr = None
+            lon_arr = None
+
+            def _find_datasets(group):
+                nonlocal primary_data, lat_arr, lon_arr
+                for k in group:
+                    item = group[k]
+                    if isinstance(item, h5py.Group):
+                        _find_datasets(item)
+                    elif isinstance(item, h5py.Dataset):
+                        name_upper = k.upper()
+                        if name_upper in ("LATITUDE", "LAT") or name_upper.endswith("_LAT"):
+                            try:
+                                lat_arr = item[:]
+                            except Exception:
+                                pass
+                        elif name_upper in ("LONGITUDE", "LON") or name_upper.endswith("_LON"):
+                            try:
+                                lon_arr = item[:]
+                            except Exception:
+                                pass
+                        elif primary_data is None and item.dtype.kind in "fiu" and item.ndim >= 2:
+                            try:
+                                primary_data = item[:]
+                            except Exception:
+                                pass
+
+            _find_datasets(h5)
+
+            if primary_data is None:
+                raise ValueError(f"No 2D numeric array found in HDF5 file: {h5_file_path}")
+
+            while primary_data.ndim > 2:
+                primary_data = primary_data[0]
+
+            # Geolocation nearest-neighbor sampling if lat/lon arrays match data shape
+            if (
+                lat_arr is not None
+                and lon_arr is not None
+                and lat_arr.shape == primary_data.shape
+                and lon_arr.shape == primary_data.shape
+            ):
+                values = []
+                for clat, clon in grid_centres:
+                    dist_sq = (lat_arr - clat) ** 2 * (111.0 ** 2) + (lon_arr - clon) ** 2 * (105.0 ** 2)
+                    r0, c0 = np.unravel_index(np.argmin(dist_sq), primary_data.shape)
+                    val = float(primary_data[r0, c0])
+                    values.append(round(val, 3))
+                return values
+
+            # Proportional spatial raster sampling across matrix
+            H, W = primary_data.shape
+            values = []
+            for r in range(10):
+                r_idx = int((r + 0.5) / 10.0 * H)
+                r_idx = min(H - 1, max(0, r_idx))
+                for c in range(9):
+                    c_idx = int((c + 0.5) / 9.0 * W)
+                    c_idx = min(W - 1, max(0, c_idx))
+                    val = float(primary_data[r_idx, c_idx])
+                    values.append(round(val, 3))
+            return values
 
     def _real_tpw_grid(self, products: Dict) -> Dict:
         """Expose a real TPW grid when the granule carried a TPW product."""

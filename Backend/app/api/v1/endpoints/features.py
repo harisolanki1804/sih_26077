@@ -14,7 +14,7 @@ router = APIRouter()
 
 
 def parse_iso_timestamp(ts_str: str) -> datetime:
-    """Parse ISO timestamp string safely, handling synthetic hour overflow (e.g. 2024-07-26T36:00:00Z)."""
+    """Parse ISO timestamp string safely, handling synthetic hour overflow (e.g. 2022-07-05T36:00:00Z)."""
     clean_str = ts_str.replace("Z", "+00:00")
     try:
         return datetime.fromisoformat(clean_str)
@@ -60,7 +60,6 @@ def get_latest_feature_grid(
             FeatureRead(
                 id=f"feat-cell-{c['cell_index']}",
                 region_id=region.id if region else "default",
-                timestamp=datetime.fromisoformat(ts["timestamp"].replace("Z", "+00:00")),
                 timestamp=parse_iso_timestamp(ts["timestamp"]),
                 cell_index=c["cell_index"],
                 cell_lat=c["lat"],

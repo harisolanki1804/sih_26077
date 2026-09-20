@@ -1,6 +1,7 @@
 import os
 from typing import List
 from pydantic_settings import BaseSettings
+from app.core.timeline_config import EVENT_CODE
 
 
 class Settings(BaseSettings):
@@ -35,7 +36,7 @@ class Settings(BaseSettings):
 
     # Pilot Area Configurations
     DEFAULT_REGION_CODE: str = "IN-MH-BOM-01"
-    DEFAULT_EVENT_CODE: str = "EVT-BOM-20240726-DELUGE"
+    DEFAULT_EVENT_CODE: str = EVENT_CODE
 
     # MOSDAC Satellite Data API (username/password only, no API key)
     MOSDAC_USERNAME: str = os.getenv("MOSDAC_USERNAME", "")

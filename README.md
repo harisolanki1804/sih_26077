@@ -342,7 +342,7 @@ sih_26077/
 
 | Property | Value |
 |----------|-------|
-| Total timesteps | 72 (hourly, 2024-07-26 to 2024-07-28) |
+| Total timesteps | 72 (hourly, 2022-07-05 to 2022-07-07) |
 | Grid cells | 90 (10 rows × 9 cols) |
 | Total samples | 6,480 |
 | File size | ~7.6 MB |

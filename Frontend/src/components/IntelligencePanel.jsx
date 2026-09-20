@@ -1,339 +1,592 @@
 /**
- * IntelligencePanel — Right Side Panel (AI + Nowcast + What-If + XAI)
- * ===================================================================
- * Displays on the right side of the map.
- * Shows: What's Coming (nowcast), Confidence, What-If Chatbot, Why This Alert.
+ * IntelligencePanel — Forecast, skill and response tools.
+ * ======================================================
+ * Four compact cards so the whole view fits without scrolling:
+ *   1. the 6-hour nowcast the system exists to produce,
+ *   2. how accurate that forecast is on the held-out test window,
+ *   3. how confident the alert is and what drove it,
+ *   4. the field tools (citizen validation, evacuation, what-if).
+ *
+ * The three field tools share one card behind tabs: they are used one at a
+ * time, so stacking them would only push the forecast off screen.
  */
-import { useMemo, useState, useEffect, useCallback } from 'react'
-import { riskColor, fmt, fmtPct } from '../utils/helpers'
+import { useEffect, useMemo, useState, useCallback } from 'react'
+import { STATE, riskState, fmt } from '../utils/helpers'
+import { cellIdToIndex, cellCenter } from '../utils/mumbaiGrid'
+import { api } from '../utils/api'
 import WhatIfChatbot from './WhatIfChatbot'
 
-export default function IntelligencePanel({ timestep, aiData, replayStepData, selectedCell, mode }) {
-  if (!aiData) return <div className="loading">Loading weather data...</div>
+export default function IntelligencePanel({ timestep, aiData, selectedCell, mode }) {
+  // The national view carries live rainfall only; the forecast pipeline,
+  // alerts and routing below are the Mumbai pilot's.
+  if (mode === 'india') {
+    return (
+      <div className="panel-stack">
+        <AccuracySection />
+        <section className="card muted-card">
+          <header className="card-head"><h3>🏙️ Mumbai Pilot</h3></header>
+          <p className="hint" style={{ marginTop: 0 }}>
+            The 6-hour flood nowcast, hazard alerts, citizen validation and evacuation
+            routing run on the Mumbai pilot grid. Switch to <b>Mumbai Replay</b> to see them.
+          </p>
+        </section>
+      </div>
+    )
+  }
+
+  if (!aiData) return <div className="panel-loading">Waiting for the forecast pipeline…</div>
 
   return (
-    <div className="intel-scroll">
-      {/* 1. What's Coming — nowcast (columns layout) */}
-      <ComingHoursSection aiData={aiData} timestep={timestep} />
-
-      {/* 2. Safe Escape Routes */}
-      <SafeRoutesSection aiData={aiData} selectedCell={selectedCell} />
-
-      {/* 3. Confidence / Trust */}
-      <ConfidenceSection aiData={aiData} />
-
-      {/* 4. What-If Chatbot */}
-      <WhatIfChatbot timestep={timestep} />
-
-      {/* 5. Why This Alert — XAI */}
-      <WhyAlertSection aiData={aiData} selectedCell={selectedCell} />
+    <div className="panel-stack">
+      <NowcastSection aiData={aiData} />
+      <AccuracySection aiData={aiData} />
+      <ResponseTools selectedCell={selectedCell} timestep={timestep} />
     </div>
   )
 }
 
-
-/* ═══ WHAT'S COMING — NEXT 6 HOURS ═══ */
-function ComingHoursSection({ aiData, timestep }) {
+/* ═══ 1. NEXT 6 HOURS ═══ */
+function NowcastSection({ aiData }) {
   const nowcast = aiData?.nowcast || {}
   const forecasts = nowcast.forecasts || []
-  const trend = nowcast.trend || 'stable'
-  const trendRate = nowcast.trend_rate_mm_hr_per_step || 0
+  const trend = nowcast.trend || 'steady'
 
   const hours = useMemo(() => {
-    if (forecasts.length > 0) {
-      return forecasts.slice(0, 6).map((f, i) => ({
-        hour_offset: i + 1,
-        rain_mm_hr: f.predicted_avg_rainfall_mm_hr ?? 0,
-        severity: f.predicted_risk_level || 'LOW',
-        confidence: f.confidence || 0.7,
-      }))
-    }
-    const baseRain = aiData?.risk_heatmap?.mean_pixel_risk ?? 20
-    return Array.from({ length: 6 }, (_, i) => {
-      const factor = trend === 'intensifying' ? (1 + i * 0.15) : trend === 'weakening' ? (1 - i * 0.1) : 1
-      const rain = Math.max(0, baseRain * factor * 0.8)
-      return {
-        hour_offset: i + 1,
-        rain_mm_hr: rain,
-        severity: rain > 60 ? 'CRITICAL' : rain > 40 ? 'HIGH' : rain > 20 ? 'MEDIUM' : 'LOW',
-        confidence: 0.85 - i * 0.05,
-      }
-    })
-  }, [forecasts, aiData, trend])
+    if (forecasts.length === 0) return []
+    return forecasts.slice(0, 6).map((f, i) => ({
+      hour: i + 1,
+      rain: f.predicted_avg_rainfall_mm_hr ?? 0,
+      level: f.predicted_risk_level || 'LOW',
+    }))
+  }, [forecasts])
 
-  const maxRain = Math.max(10, ...hours.map(h => h.rain_mm_hr))
-  const trendIcon = trend === 'intensifying' ? '📈' : trend === 'weakening' ? '📉' : '➡️'
-  const trendLabel = trend === 'intensifying' ? 'Rising' : trend === 'weakening' ? 'Falling' : 'Stable'
-  const trendColor = trend === 'intensifying' ? '#f97316' : trend === 'weakening' ? '#22c55e' : '#94a3b8'
+  if (hours.length === 0) {
+    return (
+      <section className="card muted-card">
+        <header className="card-head"><h3>⏰ Next 6 Hours</h3></header>
+        <p className="hint" style={{ marginTop: 0 }}>Not enough history at this step to issue a forecast.</p>
+      </section>
+    )
+  }
+
+  const maxRain = Math.max(10, ...hours.map((h) => h.rain))
+  const peakIdx = hours.reduce((best, h, i) => (h.rain > hours[best].rain ? i : best), 0)
+  const trendState = trend === 'intensifying' ? STATE.high : trend === 'weakening' ? STATE.low : STATE.neutral
+  const trendLabel = trend === 'intensifying' ? 'Intensifying' : trend === 'weakening' ? 'Weakening' : 'Steady'
 
   return (
-    <div className="section-card forecast-card">
-      {/* Header row with trend */}
-      <div className="forecast-header">
-        <span className="forecast-header-title">⏰ Next 6 Hours</span>
-        <span className="forecast-trend-badge" style={{ color: trendColor, borderColor: trendColor + '40' }}>
-          {trendIcon} {trendLabel}
-        </span>
-      </div>
+    <section className="card">
+      <header className="card-head">
+        <h3>⏰ Next 6 Hours</h3>
+        <span className="tag" style={{ background: trendState.tint, color: trendState.text }}>{trendLabel}</span>
+      </header>
 
-      {/* Bar chart */}
-      <div className="forecast-chart">
+      <div className="bar-chart">
         {hours.map((h, i) => {
-          const rain = h.rain_mm_hr
-          const sev = h.severity || (rain > 60 ? 'CRITICAL' : rain > 40 ? 'HIGH' : rain > 20 ? 'MEDIUM' : 'LOW')
-          const color = sev === 'CRITICAL' ? '#ef4444' : sev === 'HIGH' ? '#f97316' : sev === 'MEDIUM' ? '#eab308' : '#22c55e'
-          const barHeight = Math.max(4, (rain / maxRain) * 100)
-          const conf = Math.round((h.confidence || 0.7) * 100)
+          const state = riskState(levelToScore(h.level))
+          const height = Math.max(6, (h.rain / maxRain) * 100)
           return (
-            <div key={i} className="forecast-col">
-              <div className="forecast-value" style={{ color }}>{fmt(rain, 0)}</div>
-              <div className="forecast-bar-track">
-                <div className="forecast-bar-fill" style={{
-                  height: `${barHeight}%`,
-                  background: `linear-gradient(to top, ${color}cc, ${color})`,
-                  boxShadow: rain > 40 ? `0 0 8px ${color}44` : 'none',
-                }} />
+            <div className={`bar-col ${i === peakIdx ? 'is-peak' : ''}`} key={i}>
+              <span className="bar-value" style={{ color: state.text }}>{fmt(h.rain, 0)}</span>
+              <div className="bar-track">
+                <div className="bar-fill" style={{ height: `${height}%`, background: state.fill }} />
               </div>
-              <div className="forecast-label">+{h.hour_offset}h</div>
+              <span className="bar-label">+{h.hour}h</span>
+              <span className="bar-note" style={{ color: state.text }}>
+                {i === peakIdx ? 'PEAK' : levelShort(h.level)}
+              </span>
             </div>
           )
         })}
       </div>
-
-      {/* Severity legend dots */}
-      <div className="forecast-legend">
-        <span className="legend-dot" style={{ background: '#ef4444' }} /><span>80+</span>
-        <span className="legend-dot" style={{ background: '#f97316' }} /><span>50-80</span>
-        <span className="legend-dot" style={{ background: '#eab308' }} /><span>20-50</span>
-        <span className="legend-dot" style={{ background: '#22c55e' }} /><span>&lt;20</span>
-      </div>
-
-      {/* Trend description */}
-      <div className="trend-text" style={{ color: trendColor }}>
-        {trend === 'intensifying' && `⚡ Rainfall intensifying at +${fmt(trendRate,1)} mm/hr per step`}
-        {trend === 'weakening' && '✅ Conditions improving — storm weakening'}
-        {trend === 'steady' && '📊 Conditions stable — monitor for changes'}
-        {trend === 'insufficient_data' && '⏳ Collecting data — forecasting unavailable at this timestep'}
-      </div>
-    </div>
+    </section>
   )
 }
 
+// Compact label so the stage name fits under a bar in the panel width.
+function levelShort(level) {
+  const s = String(level || '').toUpperCase()
+  if (s === 'CRITICAL' || s === 'SEVERE') return 'CRIT'
+  if (s === 'MEDIUM' || s === 'MODERATE') return 'MED'
+  return s || '—'
+}
 
-/* ═══ SAFE ESCAPE ROUTES ═══ */
-function SafeRoutesSection({ aiData, selectedCell }) {
-  const [routes, setRoutes] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [cellIdx, setCellIdx] = useState(40) // Default to Juhu area
+function levelToScore(level) {
+  const s = String(level || '').toUpperCase()
+  if (s === 'CRITICAL' || s === 'SEVERE') return 90
+  if (s === 'HIGH') return 65
+  if (s === 'MEDIUM' || s === 'MODERATE') return 40
+  return 15
+}
 
-  const fetchRoutes = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await api.innovations.evacuationRoutes(cellIdx, 'vehicle')
-      setRoutes(data)
-    } catch (e) {
-      console.error('Evacuation route error:', e)
-      setError('Could not compute routes')
+/* ═══ 2. ACCURACY & CONFIDENCE ═══
+   Skill on the held-out window and the confidence attached to this step are two
+   readings of the same question — how much to trust the forecast — so they share
+   a card: skill on top, confidence for the current step underneath. */
+function AccuracySection({ aiData }) {
+  const [showModel, setShowModel] = useState(false)
+
+  return (
+    <section className="card">
+      <header className="card-head">
+        <h3>🎯 Forecast Confidence</h3>
+        <span className="tag" style={{ background: STATE.info.tint, color: STATE.info.text }}>this step</span>
+      </header>
+
+      {/* Anything that moves between steps comes first. */}
+      <ConfidenceBody aiData={aiData} />
+
+      {/* The skill scorecard is a property of the trained models, not of the
+          current timestep, so it lives behind a disclosure at the foot of the
+          card. As the headline it made the whole card look frozen. */}
+      <button
+        type="button"
+        className={`model-toggle ${showModel ? 'open' : ''}`}
+        aria-expanded={showModel}
+        onClick={() => setShowModel((v) => !v)}
+      >
+        <span className="model-toggle-caret">▶</span>
+        Model skill · held-out test window
+        <span className="card-note">{showModel ? 'hide' : 'fixed · show'}</span>
+      </button>
+      <ForecastSkillBody expanded={showModel} />
+    </section>
+  )
+}
+
+function ForecastSkillBody({ expanded }) {
+  const [skill, setSkill] = useState(null)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    api.metrics.skill().then((d) => { if (alive) setSkill(d) }).catch(() => { if (alive) setError(true) })
+    return () => { alive = false }
+  }, [])
+
+  if (error) return <p className="hint" style={{ marginTop: 0 }}>Evaluation report unavailable.</p>
+  if (!skill) return <div className="panel-loading">Loading accuracy report…</div>
+
+  const flood = (skill.hazard_skill || []).filter((r) => r.hazard === 'Flood')
+  const at2h = flood.find((r) => r.lead_time === '+2h') || flood[0] || {}
+  const agg = skill.probabilistic?.aggregate || {}
+  const leads = skill.nowcast?.per_lead_time || {}
+
+  return (
+    <>
+      {/* One compact line, always visible, so the model's skill is never
+          hidden behind the disclosure. */}
+      <div className="score-summary">
+        <span>Detection (POD) <b>{pctOrDash(at2h.pod)}</b></span>
+        <span>False alarms <b>{pctOrDash(at2h.far)}</b></span>
+        <span>Skill (CSI) <b>{pctOrDash(at2h.csi)}</b></span>
+        <span>Brier <b>{numOrDash(agg.brier_score, 3)}</b></span>
+        <span>ECE <b>{numOrDash(agg.expected_calibration_error_ece, 3)}</b></span>
+        <span>Coverage <b>{pctOrDash(agg.conformal_coverage_pct)}</b> of 90%</span>
+      </div>
+
+      {expanded && (
+        <>
+          <div className="strip-title">Mean absolute error (mm/hr) by lead · vs persistence</div>
+          <div className="lead-grid">
+            {['+1h', '+2h', '+3h', '+4h', '+5h', '+6h'].map((key) => {
+              const row = leads[key]
+              if (!row) return null
+              const s = row.mae_skill_vs_persistence_pct
+              const state = s > 0 ? STATE.low : STATE.neutral
+              return (
+                <div className="lead-cell" key={key}>
+                  <div className="lead-head">
+                    <span className="lead-name">{key}</span>
+                    <span className="lead-mae" style={{ color: state.text }}>{numOrDash(row.mae_mm_hr, 1)}</span>
+                  </div>
+                  <span className="lead-sub" title={`Persistence MAE ${numOrDash(row.persistence_mae_mm_hr, 1)} mm/hr`}>
+                    vs {numOrDash(row.persistence_mae_mm_hr, 1)}
+                    {s !== null && s !== undefined && ` · ${s > 0 ? '+' : ''}${fmt(s, 0)}%`}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </>
+  )
+}
+
+function pctOrDash(v) {
+  return v === null || v === undefined ? '—' : `${fmt(v, 0)}%`
+}
+function numOrDash(v, d) {
+  return v === null || v === undefined ? '—' : fmt(v, d)
+}
+
+/* ═══ 3. CONFIDENCE & DRIVERS ═══ */
+
+/** The per-cell driver names the model emits, given an icon for the panel. */
+const DRIVER_ICONS = {
+  'High Rainfall Intensity': '🌧️',
+  'Convective Instability (CAPE)': '⚡',
+  'Cold Cloud-Top Temperature': '☁️',
+  'Soil Super-Saturation': '💧',
+  'Low-Elevation Depression': '🏔️',
+  'High Tide Drainage Lockout': '🌊',
+}
+
+/**
+ * Why this step looks the way it does.
+ *
+ * The per-cell explanations carry a contribution computed from that step's own
+ * feature values, so summing them gives a driver ranking that genuinely moves
+ * through the event. (The model-level weight map also in the payload is a fixed
+ * property of the architecture, which is why it never changed.)
+ */
+function useStepDrivers(aiData) {
+  return useMemo(() => {
+    const cells = aiData?.xai_explanation?.cell_explanations || []
+    const totals = {}
+    for (const cell of cells) {
+      for (const d of cell.top_drivers || []) {
+        totals[d.factor] = (totals[d.factor] || 0) + (d.contribution || 0)
+      }
     }
-    setLoading(false)
-  }, [cellIdx])
-
-  // Auto-fetch on first render
-  useEffect(() => { fetchRoutes() }, [])
-
-  return (
-    <div className="section-card compact">
-      <h4>🗺️ Safe Escape Routes</h4>
-      <div className="evac-controls">
-        <select className="evac-select" value={cellIdx} onChange={e => setCellIdx(parseInt(e.target.value))}>
-          <option value={36}>Juhu (Cell 37)</option>
-          <option value={27}>Bandra (Cell 28)</option>
-          <option value={19}>Dadar (Cell 20)</option>
-          <option value={38}>Andheri E (Cell 39)</option>
-          <option value={46}>Goregaon (Cell 47)</option>
-          <option value={30}>Kurla (Cell 31)</option>
-          <option value={21}>Sion (Cell 22)</option>
-          <option value={40}>Powai (Cell 41)</option>
-          <option value={9}>Parel (Cell 10)</option>
-          <option value={0}>Colaba (Cell 1)</option>
-        </select>
-        <button className="btn-find-route" onClick={fetchRoutes} disabled={loading}>
-          {loading ? '⏳' : '🔍'} Find
-        </button>
-      </div>
-
-      {error && <div className="text-dim" style={{ color: '#f97316' }}>⚠️ {error}</div>}
-
-      {routes && routes.primary_route && (
-        <div className="route-card" style={{ borderColor: routes.primary_route.safety_score > 80 ? '#22c55e' : '#eab308' }}>
-          <div className="route-header">
-            <span className="route-rank">✅ Best Route</span>
-            <span className="route-time">{routes.primary_route.estimated_time_min || '?'} min</span>
-          </div>
-          <div className="route-dest" style={{ fontWeight: 700 }}>{routes.primary_route.destination || 'Safe Zone'}</div>
-          <div className="route-details">
-            <span>{routes.primary_route.distance_km || '?'} km</span>
-            <span className="route-safety" style={{ color: routes.primary_route.safety_score > 80 ? '#22c55e' : '#eab308' }}>
-              Safety: {routes.primary_route.safety_score || '?'}%
-            </span>
-          </div>
-          {routes.primary_route.max_water_depth_cm > 0 && (
-            <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2 }}>
-              🌊 Max depth on route: {routes.primary_route.max_water_depth_cm}cm
-            </div>
-          )}
-        </div>
-      )}
-
-      {routes && routes.alternative_routes && routes.alternative_routes.slice(0, 2).map((r, i) => (
-        <div key={i} className="route-card">
-          <div className="route-header">
-            <span className="route-rank" style={{ color: '#94a3b8' }}>Route {i + 2}</span>
-            <span className="route-time">{r.estimated_time_min || '?'} min</span>
-          </div>
-          <div className="route-dest">{r.destination || `Safe Zone ${i+2}`}</div>
-          <div className="route-details">
-            <span>{r.distance_km || '?'} km</span>
-            <span className="route-safety" style={{ color: r.safety_score > 80 ? '#22c55e' : '#eab308' }}>
-              Safety: {r.safety_score || '?'}%
-            </span>
-          </div>
-        </div>
-      ))}
-
-      {routes?.recommendation && (
-        <div style={{ fontSize: 9, color: '#06b6d4', padding: '4px 0', lineHeight: 1.4 }}>
-          💡 {routes.recommendation}
-        </div>
-      )}
-    </div>
-  )
+    const ranked = Object.entries(totals).sort((a, b) => b[1] - a[1])
+    const total = ranked.reduce((sum, [, v]) => sum + v, 0) || 1
+    return {
+      cellsAffected: cells.filter((c) => (c.top_drivers || []).length > 0).length,
+      totalCells: cells.length,
+      drivers: ranked.slice(0, 3).map(([name, value]) => ({
+        name,
+        icon: DRIVER_ICONS[name] || '•',
+        share: (value / total) * 100,
+      })),
+    }
+  }, [aiData])
 }
 
-// Need to import api for SafeRoutes
-import { api } from '../utils/api'
+/** Input agreement, 0–1: a high value means the forecast sources concur. */
+const TRUST_COMPONENTS = [
+  { key: 'cross_source_agreement', label: 'Source agreement' },
+  { key: 'depth_severity_agreement', label: 'Depth vs severity' },
+  { key: 'storm_detection_consistency', label: 'Storm cell consistency' },
+]
 
+function agreementState(v) {
+  if (v >= 0.75) return STATE.low
+  if (v >= 0.5) return STATE.moderate
+  return STATE.severe
+}
 
-/* ═══ CONFIDENCE / TRUST ═══ */
-function ConfidenceSection({ aiData }) {
+/**
+ * How sure the model is, and why it said what it said. The calibrated interval,
+ * the input agreement and the driver ranking answer the same question from
+ * three sides, so they share one card instead of competing for space.
+ */
+function ConfidenceBody({ aiData }) {
   const trust = aiData?.trust_score || {}
-  const score = trust.trust_score ?? 50
-  const isAnomaly = trust.is_anomalous_pattern
+  const score = trust.trust_score ?? 0
   const conformal = trust.conformal_prediction || {}
-  const guarantee = trust.confidence_guarantee || ''
-  const uncertainty = trust.uncertainty_margin_pct ?? 0
+  const lower = (conformal.lower_bound || [])[0]
+  const upper = (conformal.upper_bound || [])[0]
+  const margin = trust.uncertainty_margin_pct
+  const comp = trust.components || {}
 
-  let confLabel, confColor
-  if (score >= 80) { confLabel = 'Very Confident'; confColor = '#22c55e' }
-  else if (score >= 60) { confLabel = 'Confident'; confColor = '#eab308' }
-  else if (score >= 40) { confLabel = 'Uncertain'; confColor = '#f97316' }
-  else { confLabel = 'Low Confidence'; confColor = '#ef4444' }
+  const state = score >= 80 ? STATE.low : score >= 60 ? STATE.moderate : STATE.high
+  const label = score >= 80 ? 'High confidence' : score >= 60 ? 'Moderate confidence' : 'Low confidence'
+
+  const { drivers, cellsAffected, totalCells } = useStepDrivers(aiData)
+  const maxShare = Math.max(...drivers.map((d) => d.share), 0.0001)
+
+  if (!trust.trust_score && drivers.length === 0) return null
 
   return (
-    <div className="section-card compact">
-      <h4>🎯 How Sure Are We?</h4>
-      <div className="trust-display">
-        <div className="trust-arc">
-          <svg viewBox="0 0 120 70" className="trust-svg-md">
-            <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="8" />
-            <path
-              d="M10 60 A50 50 0 0 1 110 60"
-              fill="none" stroke={confColor} strokeWidth="8"
-              strokeDasharray={`${score * 1.57} 157`}
-              strokeLinecap="round"
-              style={{ transition: 'stroke-dasharray 0.5s' }}
-            />
-            <text x="60" y="52" textAnchor="middle" fill={confColor} fontSize="22" fontWeight="800" fontFamily="JetBrains Mono">{fmt(score, 0)}%</text>
-            <text x="60" y="64" textAnchor="middle" fill="#94a3b8" fontSize="9">{confLabel}</text>
-          </svg>
+    <>
+      <div className="sub-head">
+        <span>How much to trust the forecast</span>
+        <span className="tag" style={{ background: state.tint, color: state.text }}>{label}</span>
+      </div>
+
+      <div className="gauge-row">
+        <svg viewBox="0 0 120 68" className="gauge-svg" role="img" aria-label={`Trust score ${fmt(score, 0)} percent`}>
+          <path d="M12 58 A48 48 0 0 1 108 58" fill="none" stroke="#e6e9f0" strokeWidth="10" strokeLinecap="round" />
+          <path
+            d="M12 58 A48 48 0 0 1 108 58"
+            fill="none"
+            stroke={state.fill}
+            strokeWidth="10"
+            strokeLinecap="round"
+            strokeDasharray={`${(score / 100) * 150.8} 151`}
+          />
+          <text x="60" y="50" textAnchor="middle" className="gauge-value" fill={state.text}>{fmt(score, 0)}</text>
+          <text x="60" y="63" textAnchor="middle" className="gauge-caption">trust / 100</text>
+        </svg>
+        <div className="gauge-side">
+          <div className="gauge-line">
+            <span className="gauge-line-label">Calibrated risk interval</span>
+            <span className="gauge-line-value">
+              {lower !== undefined && upper !== undefined ? `${fmt(lower, 0)} – ${fmt(upper, 0)}` : '—'}
+            </span>
+          </div>
+          <div className="gauge-line">
+            <span className="gauge-line-label">Uncertainty margin</span>
+            <span className="gauge-line-value">{margin !== undefined ? `±${fmt(margin, 0)}%` : '—'}</span>
+          </div>
         </div>
       </div>
-      {guarantee && (
-        <div style={{ fontSize: 10, color: '#06b6d4', textAlign: 'center', marginTop: 4 }}>
-          📐 {guarantee}
+
+      {/* These three move from step to step — they are the measured agreement
+          between the inputs behind this step's forecast, which is why they
+          belong here rather than in the fixed scorecard below. */}
+      {TRUST_COMPONENTS.some((c) => comp[c.key] !== undefined) && (
+        <div className="trust-grid">
+          {TRUST_COMPONENTS.map((c) => {
+            const v = comp[c.key]
+            if (v === undefined) return null
+            const s = agreementState(v)
+            return (
+              <div className="trust-cell" key={c.key}>
+                <span className="trust-cell-label">{c.label}</span>
+                <span className="trust-cell-value" style={{ color: s.text }}>{fmt(v * 100, 0)}%</span>
+              </div>
+            )
+          })}
         </div>
       )}
-      {isAnomaly && (
-        <div className="anomaly-warning">
-          ⚠️ Unusual pattern — cross-check with IMD alerts
-        </div>
+
+      {drivers.length > 0 && (
+        <>
+          <div className="strip-title">
+            What is driving it · {cellsAffected} of {totalCells} cells showing a risk factor
+          </div>
+          <div className="driver-list">
+            {drivers.map((d, i) => (
+              <div className="driver-row" key={d.name}>
+                <span className="driver-rank">{i + 1}</span>
+                <span className="driver-name">{d.icon} {d.name}</span>
+                <div className="driver-track">
+                  <div className="driver-fill" style={{ width: `${(d.share / maxShare) * 100}%`, background: riskState((d.share / maxShare) * 100).fill }} />
+                </div>
+                <span className="driver-value">{fmt(d.share, 0)}%</span>
+              </div>
+            ))}
+          </div>
+        </>
       )}
-      <div style={{ marginTop: 6 }}>
-        <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>Model Agreement</div>
-        <AgreementBar label="Cross-Source" value={trust.components?.cross_source_agreement ?? 0} />
-        <AgreementBar label="Nowcast" value={trust.components?.nowcast_confidence ?? 0} />
-        <AgreementBar label="Storm Detection" value={trust.components?.storm_detection_consistency ?? 0} />
-      </div>
-    </div>
+    </>
   )
 }
 
-function AgreementBar({ label, value }) {
-  const pct = Math.round(value * 100)
-  const color = pct > 80 ? '#22c55e' : pct > 50 ? '#eab308' : '#ef4444'
+/* ═══ 4. RESPONSE TOOLS (tabbed) ═══ */
+
+const TOOLS = [
+  {
+    key: 'citizen',
+    icon: '📢',
+    label: 'Citizen report',
+    hint: 'A ground report is checked against the model before it is trusted.',
+  },
+  {
+    key: 'evacuation',
+    icon: '🗺️',
+    label: 'Evacuation',
+    hint: 'Safest driving route out of the chosen area, avoiding the deepest water.',
+  },
+  {
+    key: 'whatif',
+    icon: '💬',
+    label: 'What-if',
+    hint: 'Ask how the forecast changes when an input changes.',
+  },
+]
+
+function ResponseTools({ selectedCell, timestep }) {
+  const [tool, setTool] = useState('citizen')
+  const active = TOOLS.find((t) => t.key === tool)
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-      <span style={{ fontSize: 10, color: '#94a3b8', width: 90, flexShrink: 0 }}>{label}</span>
-      <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 3, transition: 'width 0.3s' }} />
+    <section className="card">
+      {/* The tab row is the card header — repeating the active tool name in a
+          title above it said the same thing twice. */}
+      <div className="tool-tabs" role="tablist">
+        {TOOLS.map((t) => (
+          <button
+            key={t.key}
+            role="tab"
+            aria-selected={tool === t.key}
+            className={`tool-tab ${tool === t.key ? 'active' : ''}`}
+            onClick={() => setTool(t.key)}
+          >
+            <span className="tool-tab-icon">{t.icon}</span>
+            {t.label}
+          </button>
+        ))}
       </div>
-      <span style={{ fontSize: 10, fontFamily: 'JetBrains Mono', color, width: 32, textAlign: 'right' }}>{pct}%</span>
-    </div>
+      <p className="tool-hint">{active.hint}</p>
+
+      {/* The tool body gets its own scroll box so a long route list or chat
+          cannot push the forecast cards off screen. */}
+      <div className="tools-body">
+        {tool === 'citizen' && <CitizenReportTool selectedCell={selectedCell} />}
+        {tool === 'evacuation' && <EvacuationTool selectedCell={selectedCell} />}
+        {tool === 'whatif' && <WhatIfChatbot timestep={timestep} />}
+      </div>
+    </section>
   )
 }
 
+/* Field report validation */
+function CitizenReportTool({ selectedCell }) {
+  const [text, setText] = useState('')
+  const [state, setState] = useState({ loading: false, result: null, error: null })
 
-/* ═══ WHY THIS ALERT — XAI ═══ */
-function WhyAlertSection({ aiData, selectedCell }) {
-  const xai = aiData?.xai_explanation || {}
-  const importanceDict = xai.feature_importance_global || {}
-  const summary = xai.global_summary || ''
-
-  const factorNames = {
-    'rainfall_intensity': '🌧 Heavy rain',
-    'cape_instability': '⚡ Storm energy',
-    'cloud_top_temperature': '☁️ Cold clouds',
-    'soil_saturation': '💧 Soaked ground',
-    'elevation_depression': '🏔 Low areas',
-    'tidal_lock': '🌊 Tidal lock',
-    'wind_shear': '💨 Wind shear',
-    'drainage_distance': '🚰 Drain distance',
-    'integrated_water_vapor': '💦 Moisture column',
-    'convective_inhibition': '⛔ Storm cap',
-    'lifted_index': '🎈 Instability',
-    'ctt_drop_rate': '🥶 Cloud cooling',
+  const submit = async (e) => {
+    e.preventDefault()
+    if (!text.trim()) return
+    setState({ loading: true, result: null, error: null })
+    try {
+      // Report coordinates: the selected map cell if there is one, else central Mumbai.
+      const idx = cellIdToIndex(selectedCell)
+      const [lat, lon] = idx === null ? [19.07, 72.88] : cellCenter(Math.floor(idx / 9), idx % 9)
+      const result = await api.ai.crowdReport(text.trim(), lat, lon)
+      setState({ loading: false, result, error: null })
+    } catch (err) {
+      setState({ loading: false, result: null, error: err.message || 'Verification failed' })
+    }
   }
 
-  const sorted = Object.entries(importanceDict)
-    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
-    .slice(0, 5)
+  // Short chip labels with the full report in the tooltip: a scrolling row of
+  // half-truncated sentences read as broken text at this width.
+  const samples = [
+    { label: 'Flooded at Kurla stn', text: 'Severe flooding near Kurla station, water above knee level' },
+    { label: 'Hindmata 2 ft deep', text: 'Water level 2 feet high at Hindmata, Dadar' },
+    { label: 'Bandra West clear', text: 'Roads dry and clear at Bandra West' },
+  ]
+
+  const confirmed = state.result?.classification === 'CONFIRMS_FLOOD_ZONE'
+  const resultState = confirmed ? STATE.high : STATE.info
 
   return (
-    <div className="section-card compact">
-      <h4>🔍 Why This Alert?</h4>
+    <>
+      <form className="inline-form" onSubmit={submit}>
+        <input
+          className="text-input"
+          type="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Describe the flooding you can see…"
+        />
+        <button className="btn-primary" type="submit" disabled={state.loading || !text.trim()}>
+          {state.loading ? '…' : 'Check'}
+        </button>
+      </form>
 
-      <div className="driver-simple-list">
-        {sorted.map(([key, val], i) => (
-          <div key={i} className="driver-simple-row">
-            <span className="driver-rank">#{i + 1}</span>
-            <span className="driver-name">{factorNames[key] || key.replace(/_/g, ' ')}</span>
-            <div className="driver-bar-track">
-              <div className="driver-bar-fill" style={{
-                width: `${Math.abs(val) * 100}%`,
-                background: riskColor(Math.abs(val) * 100),
-              }} />
-            </div>
-          </div>
+      <div className="chip-row">
+        {samples.map((s) => (
+          <button className="chip-btn" type="button" key={s.label} title={s.text} onClick={() => setText(s.text)}>
+            {s.label}
+          </button>
         ))}
       </div>
 
-      {summary && (
-        <div className="summary-plain">
-          <strong>📝 Summary:</strong> {summary}
+      {state.error && <p className="hint hint-warn">⚠️ {state.error}</p>}
+
+      {state.result && (
+        <div className="result-box" style={{ background: resultState.tint, borderColor: resultState.fill }}>
+          <div className="result-head">
+            <span style={{ color: resultState.text }}>
+              {confirmed ? '✅ Confirms flooding' : 'ℹ️ No flooding indicated'}
+            </span>
+            <span className="result-conf">
+              {Math.round((state.result.confidence || 0) * 100)}% confidence
+            </span>
+          </div>
+          <p className="result-body">
+            Location read as <b>{state.result.detected_location || 'Mumbai (general)'}</b>
+            {state.result.flood_keywords?.length > 0 && ` · matched: ${state.result.flood_keywords.join(', ')}`}
+          </p>
         </div>
       )}
-    </div>
+    </>
+  )
+}
+
+/* Evacuation routing */
+function EvacuationTool({ selectedCell }) {
+  const [origin, setOrigin] = useState(40)
+  const [routes, setRoutes] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
+
+  const load = useCallback(async (cell) => {
+    setLoading(true)
+    setError(false)
+    try {
+      setRoutes(await api.innovations.evacuationRoutes(cell, 'vehicle'))
+    } catch {
+      setError(true)
+      setRoutes(null)
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load(origin) }, [origin, load])
+
+  const primary = routes?.primary_route
+  const alternates = (routes?.alternative_routes || []).slice(0, 2)
+
+  return (
+    <>
+      <div className="inline-form">
+        <select className="select-input" value={origin} onChange={(e) => setOrigin(parseInt(e.target.value, 10))}>
+          <option value={36}>Juhu</option>
+          <option value={27}>Bandra</option>
+          <option value={19}>Dadar</option>
+          <option value={38}>Andheri East</option>
+          <option value={46}>Goregaon</option>
+          <option value={30}>Kurla</option>
+          <option value={21}>Sion</option>
+          <option value={40}>Powai</option>
+          <option value={9}>Parel</option>
+          <option value={0}>Colaba</option>
+        </select>
+        <button className="btn-ghost" onClick={() => load(origin)} disabled={loading}>
+          {loading ? '…' : 'Refresh'}
+        </button>
+      </div>
+
+      {error && <p className="hint hint-warn">⚠️ Route service unavailable.</p>}
+
+      <ul className="route-list">
+        {primary && (
+          <li className="route-row primary">
+            <span className="route-main">
+              <span className="route-badge">Recommended</span>
+              <span className="route-dest">{primary.destination || 'Safe zone'}</span>
+              <span className="route-time">{primary.estimated_time_min ?? '—'} min</span>
+            </span>
+            <span className="route-stats">
+              {fmt(primary.distance_km, 1)} km · safety {primary.safety_score ?? '—'}%
+              {' · '}max depth {fmt(primary.max_water_depth_cm, 0)} cm
+            </span>
+          </li>
+        )}
+
+        {alternates.map((r, i) => (
+          <li className="route-row" key={i}>
+            <span className="route-main">
+              <span className="route-badge">Alt {i + 2}</span>
+              <span className="route-dest">{r.destination || 'Safe zone'}</span>
+              <span className="route-time">{r.estimated_time_min ?? '—'} min</span>
+            </span>
+            <span className="route-stats">
+              {fmt(r.distance_km, 1)} km · safety {r.safety_score ?? '—'}%
+              {r.max_water_depth_cm !== undefined && ` · max depth ${fmt(r.max_water_depth_cm, 0)} cm`}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      {routes?.recommendation && <p className="hint">💡 {routes.recommendation}</p>}
+    </>
   )
 }

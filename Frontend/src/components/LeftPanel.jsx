@@ -1,306 +1,348 @@
 /**
- * LeftPanel — Situation Overview + Active Alerts + Timeline KPIs
- * ===============================================================
- * Displays on the left side of the map.
- * Shows: situation overview, active alerts, storm info, key metrics.
- * All KPIs sync with the current timestep.
+ * LeftPanel — the operational picture.
+ * ====================================
+ * Only the indicators an early-warning operator acts on:
+ *   1. how bad it is now (risk, water depth, alerts, storm cells),
+ *   2. what the forcing is (rainfall, tide, drainage overflow),
+ *   3. which localities are alerting,
+ *   4. what response phase the city is in.
+ *
+ * Every band and colour comes from utils/helpers, so a score is described the
+ * same way here, on the map legend and in the phase card.
  */
 import { useState } from 'react'
-import { riskColor, fmt, fmtPct } from '../utils/helpers'
+import {
+  fmt, riskState, riskLabel, severityState, hazardMeta, stepAlerts,
+  rainBand, tideBand, getPhase, getPhaseLabel, getPhaseState, PHASE_GUIDANCE, PHASES, HAZARDS,
+} from '../utils/helpers'
+import { KPI, StatRow } from './Tiles'
 
-const LOCALITY = [
-  ['Colaba','Fort','Churchgate','Marine Drive','Nariman Point','Malabar Hill','Walkeshwar','Haji Ali','Parel'],
-  ['Grant Road','Mumbai Central','Worli','Prabhadevi','Matunga','Sion','Wadala','Sewri','Chinchpokli'],
-  ['Mahim','Dadar','Lower Parel','Elphinstone','Kurla','Vidyavihar','Ghatkopar','BKC','Kalina'],
-  ['Bandra','Bandra West','Khar','Santacruz','Vile Parle','Andheri E','Saki Naka','Chandivali','Powai'],
-  ['Juhu Beach','Juhu','Versova','Lokhandwala','Marol','MIDC Andheri','Sahar','Vikhroli','Bhandup'],
-  ['Amboli','Jogeshwari','Goregaon','D.N. Nagar','Malad','Kandivali','Borivali','Dahisar','Kanjurmarg'],
-  ['Malvani','Malad West','Goregaon E','Aarey Colony','Mindspace','Chinchpokli E','Vikhroli E','Nahur','Thane'],
-  ['Erangal','Kandivali W','Borivali W','Magathane','Mulund W','Mulund E','Wagle Estate','Thane City','Thane Creek'],
-  ['Madh Island','Marve','Manori','Gorai','Uttan','Mira Road','Thane W','Kopar Khairane','Ghansoli'],
-  ['Vasai','Nallasopara','Virar','Dahisar N','Mira Bhayander','Vashi','Sanpada','Nerul','Belapur'],
-].flat()
+export default function LeftPanel({ timestep, aiData, replayStepData, mode, liveSummary }) {
+  if (mode === 'india') return <NationalOverview summary={liveSummary} />
 
-export default function LeftPanel({ timestep, aiData, replayStepData, selectedCell, mode }) {
   return (
     <>
-      {/* 1. Situation Overview — key metrics */}
-      <SituationOverview aiData={aiData} replayStepData={replayStepData} mode={mode} />
-
-      {/* 2. Data Sources & Model Status */}
-      <DataSourceSection aiData={aiData} />
-
-      {/* 3. Active Alerts — drawn straight from the step response so they can never go stale */}
+      <SituationOverview aiData={aiData} replayStepData={replayStepData} timestep={timestep} />
+      <HazardOutlook aiData={aiData} />
       <AlertsSection timestep={timestep} alerts={replayStepData?.alerts_generated} />
-
-      {/* 4. Stay Alert — timeline synced */}
-      <StayAlertSection timestep={timestep} aiData={aiData} mode={mode} />
-
-      {/* 5. Storm Cell Info */}
-      <StormInfoSection aiData={aiData} />
+      <ResponseStatus timestep={timestep} />
     </>
   )
 }
 
+/* ═══ 1. CURRENT SITUATION ═══ */
 
-/* ═══ SITUATION OVERVIEW ═══ */
-function SituationOverview({ aiData, replayStepData, mode }) {
+function SituationOverview({ aiData, replayStepData, timestep }) {
   const risk = aiData?.risk_heatmap || {}
-  const mh = aiData?.multi_hazard || {}
   const flood = aiData?.flood_depth || {}
   const storm = aiData?.storm_cells || {}
-  const physics = aiData?.physics_risk || {}
 
-  const avgRisk = risk.mean_pixel_risk ?? physics.avg_physics_risk ?? 0
-  const maxRisk = risk.max_pixel_risk ?? 0
+  const meanRisk = risk.mean_pixel_risk ?? aiData?.physics_risk?.avg_physics_risk ?? 0
+  const maxRisk = risk.max_pixel_risk ?? meanRisk
   const maxDepth = flood.max_water_depth_cm ?? 0
   const stormCount = storm.total_cells_detected ?? 0
+  const overflowCount = flood.overflow_nodes_count ?? 0
 
-  // All three hazard families, always visible (cells classified by the head)
-  const dist = risk.risk_class_distribution || {}
-  const tsCount = dist.THUNDERSTORM ?? 0
-  const cbCount = dist.CLOUDBURST ?? 0
-  const ffCount = dist.FLASH_FLOOD ?? 0
+  const alertCount = stepAlerts(replayStepData, timestep).length
+  const rainfall = replayStepData?.avg_rainfall_1h_mm ?? 0
+  const tideHeight = replayStepData?.tide_height_m ?? 0
+
+  const riskLevel = riskState(maxRisk)
+  const depthState = maxDepth >= 50 ? riskState(80) : maxDepth >= 20 ? riskState(55) : riskState(10)
+  const alertState = alertCount === 0 ? riskState(5) : alertCount >= 6 ? riskState(80) : riskState(55)
+  const stormState = stormCount === 0 ? riskState(5) : stormCount >= 5 ? riskState(80) : riskState(55)
+  const rain = rainBand(rainfall)
+  const tide = tideBand(tideHeight)
 
   return (
-    <div className="section-card compact">
-      <h4>📊 Situation Overview</h4>
-      <div className="kpi-grid-2">
-        <KPICard label="Avg Risk" value={fmt(avgRisk, 0)} color={riskColor(avgRisk)} />
-        <KPICard label="Max Risk" value={fmt(maxRisk, 0)} color={riskColor(maxRisk)} />
-        <KPICard label="Max Depth" value={`${fmt(maxDepth, 0)}cm`} color={maxDepth > 30 ? '#ef4444' : '#eab308'} />
-        <KPICard label="Storms" value={fmt(stormCount, 0)} color={stormCount > 5 ? '#f97316' : '#06b6d4'} />
+    <section className="card">
+      <header className="card-head">
+        <h3>📊 Current Situation</h3>
+        <span className="tag" style={{ background: riskLevel.tint, color: riskLevel.text }}>
+          Grid avg {fmt(meanRisk, 0)}/100
+        </span>
+      </header>
+
+      <div className="kpi-grid">
+        <KPI
+          icon="⚠️"
+          label="Flood risk"
+          value={fmt(maxRisk, 0)}
+          suffix="/100"
+          sub={riskLabel(maxRisk)}
+          state={riskLevel}
+        />
+        <KPI
+          icon="🌊"
+          label="Max water depth"
+          value={fmt(maxDepth, 0)}
+          suffix="cm"
+          sub={maxDepth >= 20 ? 'Above safe level' : 'Within capacity'}
+          state={depthState}
+        />
+        <KPI
+          icon="🚨"
+          label="Localities alerting"
+          value={fmt(alertCount, 0)}
+          state={alertState}
+        />
+        <KPI
+          icon="⛈️"
+          label="Storm cells"
+          value={fmt(stormCount, 0)}
+          state={stormState}
+        />
       </div>
-      <div className="kpi-grid-3 mini" style={{ marginTop: 8 }}>
-        <MiniKPI label="⛈ TS cells" value={fmt(tsCount, 0)} color={tsCount > 10 ? '#f59e0b' : '#64748b'} />
-        <MiniKPI label="🌧 CB cells" value={fmt(cbCount, 0)} color={cbCount > 10 ? '#3b82f6' : '#64748b'} />
-        <MiniKPI label="🌊 FF cells" value={fmt(ffCount, 0)} color={ffCount > 10 ? '#ef4444' : '#64748b'} />
+
+      <div className="stat-rows">
+        <StatRow icon="🌧️" label="Rainfall" value={`${fmt(rainfall, 1)} mm/hr`} band={rain} />
+        <StatRow icon="🌊" label="Tide" value={`${fmt(tideHeight, 2)} m`} band={tide} />
+        <StatRow
+          icon="🚰"
+          label="Drainage overflow"
+          value={`${fmt(overflowCount, 0)} zones`}
+          band={overflowCount > 0
+            ? { label: 'Over capacity', state: riskState(80) }
+            : { label: 'Within capacity', state: riskState(5) }}
+        />
       </div>
-    </div>
+    </section>
   )
 }
 
+/* ═══ 2. HAZARD OUTLOOK ═══ */
 
-/* ═══ ACTIVE ALERTS ═══ */
+/**
+ * City-wide probability of each hazard family the system forecasts. The bands
+ * reuse the risk colour scale, so a 60% chance reads the same shade here as a
+ * 60 risk score does on the map.
+ */
+function HazardOutlook({ aiData }) {
+  const mh = aiData?.multi_hazard
+  if (!mh) return null
+
+  const rows = [
+    { key: 'THUNDERSTORM', prob: mh.aggregate_thunderstorm_prob },
+    { key: 'CLOUDBURST', prob: mh.aggregate_cloudburst_prob },
+    { key: 'FLASH_FLOOD', prob: mh.aggregate_flash_flood_prob },
+  ].map((r) => ({ ...r, meta: HAZARDS[r.key], state: riskState((r.prob ?? 0) * 100) }))
+
+  const dominant = rows.reduce((best, r) => ((r.prob ?? 0) > (best.prob ?? 0) ? r : best), rows[0])
+
+  return (
+    <section className="card">
+      <header className="card-head">
+        <h3>🌪️ Hazard Outlook</h3>
+        <span className="tag" style={{ background: dominant.state.tint, color: dominant.state.text }}>
+          Dominant · {dominant.meta.label}
+        </span>
+      </header>
+      <div className="prob-list">
+        {rows.map((r) => (
+          <div className="prob-row" key={r.key}>
+            <span className="prob-label">{r.meta.icon} {r.meta.label}</span>
+            <span className="prob-track">
+              <span className="prob-fill" style={{ width: `${Math.min(100, (r.prob ?? 0) * 100)}%`, background: r.state.fill }} />
+            </span>
+            <span className="prob-value" style={{ color: r.state.text }}>{fmt((r.prob ?? 0) * 100, 0)}%</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+/* ═══ 3. ACTIVE ALERTS ═══ */
+
 function AlertsSection({ timestep, alerts }) {
   const [expanded, setExpanded] = useState(false)
 
-  // The backend already deactivates previous alerts and raises the current
-  // step's alerts inside POST /replay/step, so we render alerts_generated
-  // from that same response — no separate fetch, no race, always in sync.
-  const list = (Array.isArray(alerts) ? alerts : [])
-    .filter(a => a.timestep === undefined || a.timestep === timestep)
+  const list = stepAlerts({ alerts_generated: alerts }, timestep)
 
-  const sorted = [...list]
-    .sort((a, b) => (b.risk_score_total || 0) - (a.risk_score_total || 0))
-
-  const critical = sorted.filter(a => a.severity === 'CRITICAL')
-  const high = sorted.filter(a => a.severity === 'HIGH')
-  const shown = expanded ? sorted.slice(0, 15) : sorted.slice(0, 5)
-
-  return (
-    <div className="section-card compact">
-      <h4>
-        🚨 Active Alerts
-        {critical.length > 0 && <span className="badge badge-red">{critical.length} Critical</span>}
-        {high.length > 0 && <span className="badge badge-orange">{high.length} High</span>}
-      </h4>
-
-      {shown.length === 0 && <p className="text-dim">🟢 No active alerts at this timestep</p>}
-
-      {shown.map((a, i) => {
-        const hazardIcon = a.alert_type === 'CLOUDBURST' ? '🌧️'
-          : a.alert_type === 'SEVERE_THUNDERSTORM' ? '⛈️'
-          : a.alert_type === 'FLASH_FLOOD' ? '🌊'
-          : '⚠️'
-        const hazardColor = a.alert_type === 'CLOUDBURST' ? '#3b82f6'
-          : a.alert_type === 'SEVERE_THUNDERSTORM' ? '#f59e0b'
-          : a.alert_type === 'FLASH_FLOOD' ? '#ef4444'
-          : '#eab308'
-        return (
-          <div key={a.id || i} className="alert-row">
-            <span className={`alert-dot ${a.severity === 'CRITICAL' ? 'dot-red' : a.severity === 'HIGH' ? 'dot-orange' : 'dot-yellow'}`} />
-            <span className="alert-locality">{a.locality_name || `Cell ${a.cell_id}`}</span>
-            <span className="alert-type" style={{color: hazardColor}}>{hazardIcon} {a.alert_type}</span>
-            <span className="alert-score">{fmt(a.risk_score_total, 0)}</span>
-          </div>
-        )
-      })}
-
-      {sorted.length > 5 && (
-        <button className="btn-expand" onClick={() => setExpanded(!expanded)}>
-          {expanded ? '▲ Show less' : `▼ Show all ${sorted.length}`}
-        </button>
-      )}
-    </div>
-  )
-}
-
-
-/* ═══ STAY ALERT — TIMELINE SYNCED ═══ */
-function StayAlertSection({ timestep, aiData, mode }) {
-  if (mode !== 'mumbai') return null
-
-  // Compute alert level based on current timestep
-  const risk = aiData?.risk_heatmap || {}
-  const avgRisk = risk.mean_pixel_risk ?? 0
-  const maxRisk = risk.max_pixel_risk ?? 0
-  const storm = aiData?.storm_cells || {}
-  const stormCount = storm.total_cells_detected ?? 0
-  const flood = aiData?.flood_depth || {}
-  const overflowNodes = flood.overflow_nodes_count ?? 0
-
-  // Phase-based alert level
-  let alertLevel, alertColor, alertIcon, alertText
-  if (timestep <= 12) {
-    alertLevel = 'MONITORING'; alertColor = '#22c55e'; alertIcon = '🟢'
-    alertText = 'Conditions normal. Monitoring weather systems.'
-  } else if (timestep <= 24) {
-    alertLevel = 'WATCH'; alertColor = '#eab308'; alertIcon = '🟡'
-    alertText = 'Storm building. Stay informed and prepare.'
-  } else if (timestep <= 40) {
-    alertLevel = 'WARNING'; alertColor = '#f97316'; alertIcon = '🟠'
-    alertText = 'Active flooding risk. Avoid low-lying areas.'
-  } else if (timestep <= 56) {
-    alertLevel = 'ALERT'; alertColor = '#ef4444'; alertIcon = '🔴'
-    alertText = 'Severe conditions. Evacuate if instructed.'
-  } else {
-    alertLevel = 'RECESSION'; alertColor = '#06b6d4'; alertIcon = '🔵'
-    alertText = 'Conditions improving. Watch for residual flooding.'
+  if (list.length === 0) {
+    return (
+      <section className="card">
+        <header className="card-head"><h3>🚨 Hazard Alerts</h3></header>
+        <p className="hint" style={{ marginTop: 0 }}>
+          ✅ No locality is above the alert threshold at this step.
+        </p>
+      </section>
+    )
   }
 
-  // Override with real data if available
-  if (maxRisk >= 80) { alertLevel = 'CRITICAL'; alertColor = '#ef4444'; alertIcon = '🔴' }
+  const critical = list.filter((a) => severityState(a.severity) === severityState('CRITICAL')).length
+  // Three rows is what fits before the panel starts scrolling; the rest are one
+  // click away rather than permanently on screen.
+  const shown = expanded ? list.slice(0, 12) : list.slice(0, 3)
 
   return (
-    <div className="section-card compact">
-      <h4>{alertIcon} Stay Alert</h4>
-      <div className="alert-status-bar" style={{ borderLeftColor: alertColor }}>
-        <div className="alert-level" style={{ color: alertColor }}>{alertLevel}</div>
-        <div className="alert-text">{alertText}</div>
-      </div>
-      <div className="kpi-grid-3 mini">
-        <MiniKPI label="Risk" value={fmt(avgRisk, 0)} color={riskColor(avgRisk)} />
-        <MiniKPI label="Storms" value={fmt(stormCount, 0)} color={stormCount > 5 ? '#f97316' : '#06b6d4'} />
-        <MiniKPI label="Overflow" value={fmt(overflowNodes, 0)} color={overflowNodes > 0 ? '#ef4444' : '#22c55e'} />
-      </div>
-    </div>
+    <section className="card">
+      <header className="card-head">
+        <h3>🚨 Hazard Alerts</h3>
+        <div className="tag-row">
+          {critical > 0 && (
+            <span className="tag" style={{ background: riskState(60).tint, color: riskState(60).text }}>
+              {critical} critical
+            </span>
+          )}
+          {list.length > 3 && (
+            <button className="tag tag-btn" onClick={() => setExpanded(!expanded)}>
+              {expanded ? 'Show fewer' : `Show all ${list.length}`}
+            </button>
+          )}
+        </div>
+      </header>
+
+      <ul className="row-list">
+        {shown.map((a, i) => {
+          const hazard = hazardMeta(a.alert_type)
+          const sev = severityState(a.severity)
+          return (
+            <li className="alert-item" key={a.id || i}>
+              <span className="alert-bar" style={{ background: sev.fill }} />
+              <div className="alert-main">
+                <span className="alert-place">{a.locality_name || a.cell_id || `Cell ${i + 1}`}</span>
+                <span className="alert-meta">
+                  {hazard.icon} {hazard.label}
+                  {a.flood_depth_estimate_cm ? ` · ${fmt(a.flood_depth_estimate_cm, 0)} cm` : ''}
+                </span>
+              </div>
+              <div className="alert-right">
+                <span className="alert-score" style={{ color: sev.text }}>{fmt(a.risk_score_total, 0)}</span>
+                <span className="alert-sev" style={{ color: sev.text }}>{a.severity}</span>
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+
+    </section>
   )
 }
 
+/* ═══ 4. RESPONSE STATUS ═══ */
 
-/* ═══ STORM INFO ═══ */
-function StormInfoSection({ aiData }) {
-  const storm = aiData?.storm_cells || {}
-  const cells = storm.cells || []
-  const peak = storm.peak_storm_intensity ?? 0
-
-  if (cells.length === 0) return null
+/**
+ * Where the city is in the event, and what the operator should do about it.
+ * The numbers themselves live in Current Situation — this card is the response
+ * protocol plus the phase timeline, so nothing is stated twice.
+ */
+function ResponseStatus({ timestep }) {
+  const phase = getPhaseState(timestep)
+  const phaseLabel = getPhaseLabel(timestep)
+  const current = getPhase(timestep)
+  const guidance = PHASE_GUIDANCE[phaseLabel] || { text: '', action: '' }
 
   return (
-    <div className="section-card compact">
-      <h4>⛈️ Storm Cells Detected</h4>
-      <div className="kpi-grid-2">
-        <KPICard label="Active Cells" value={fmt(cells.length, 0)} color="#f97316" />
-        <KPICard label="Peak Intensity" value={`${fmt(peak, 0)}%`} color={peak > 70 ? '#ef4444' : '#eab308'} />
+    <section className="card" style={{ borderColor: phase.fill }}>
+      <header className="card-head">
+        <h3>🧭 {current.label}</h3>
+        <span className="tag" style={{ background: phase.tint, color: phase.text }}>
+          Step {fmt(timestep, 0)} / 72
+        </span>
+      </header>
+
+      <div className="response-banner" style={{ borderColor: phase.fill, background: phase.tint }}>
+        <p className="response-text">{guidance.text}</p>
+        <p className="response-action" style={{ color: phase.text }}>Action · {guidance.action}</p>
       </div>
-      {cells.slice(0, 3).map((c, i) => (
-        <div key={i} className="storm-cell-row">
-          <span className="storm-id">{c.tracking_id || `SC-${i+1}`}</span>
-          <span className="storm-intensity" style={{ color: riskColor(c.intensity || 0) }}>
-            {fmt(c.intensity || 0, 0)}%
-          </span>
-          <span className="storm-dir">{c.movement_direction || '—'}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
 
-
-/* ═══ DATA SOURCES & MODEL STATUS ═══ */
-function DataSourceSection({ aiData }) {
-  const mhMode = aiData?.multi_hazard?.inference_mode || 'heuristic'
-  const fdMode = aiData?.flood_depth?.inference_mode || 'heuristic'
-  const sat = aiData?.satellite_data || {}
-  const physics = aiData?.physics_risk || {}
-  const trust = aiData?.trust_score || {}
-
-  const isNeuralNet = mhMode === 'trained_neural_network'
-  const satSource = sat.source || 'N/A'
-  const satReal = sat.is_real_data
-  const physicsValid = physics.conservation_valid ?? physics.summary?.physics_valid
-  const conformalGuarantee = trust.confidence_guarantee || 'N/A'
-
-  // Truthful INSAT status — the system never fabricates satellite data:
-  // it reports LIVE when a real MOSDAC granule is cached, otherwise why not.
-  const satName = (sat.satellite && String(sat.satellite).includes('3DR'))
-    ? 'INSAT-3DR'
-    : (sat.satellite && String(sat.satellite).includes('3D')) ? 'INSAT-3D' : 'INSAT-3D/3DR'
-  let satLabel = 'Waiting', satColor = '#eab308'
-  if (satReal) { satLabel = 'LIVE'; satColor = '#22c55e' }
-  else if (String(satSource).includes('SYNTHETIC')) { satLabel = 'Synthetic'; satColor = '#ef4444' }
-  else if (String(satSource).includes('unavailable_offline')) { satLabel = 'Offline · fetch once'; satColor = '#94a3b8' }
-  else if (String(satSource).includes('unavailable_retry')) { satLabel = 'Retrying…'; satColor = '#eab308' }
-  else if (String(satSource).startsWith('unavailable')) { satLabel = 'Unavailable'; satColor = '#f97316' }
-
-  return (
-    <div className="section-card compact">
-      <h4>🤖 AI Engine Status</h4>
-      <div className="kpi-grid-2">
-        <KPICard label="Neural Net" value={isNeuralNet ? 'ON' : 'OFF'} color={isNeuralNet ? '#22c55e' : '#eab308'} />
-        <KPICard label="Trust" value={fmt(trust.trust_score || 0, 0) + '%'} color={trust.trust_score > 70 ? '#22c55e' : trust.trust_score > 40 ? '#eab308' : '#ef4444'} />
+      {/* Six phases, one segment each — the shaded tail is the event already past. */}
+      <div className="phase-bar" role="img" aria-label={`Event phase ${current.label}`}>
+        {PHASES.map((p) => (
+          <span
+            key={p.label}
+            className={`phase-seg ${p.label === current.label ? 'is-current' : ''}`}
+            style={{ background: p.upto <= timestep ? p.state.fill : 'var(--surface-sunk)' }}
+            title={`${p.label} · to step ${p.upto}`}
+          />
+        ))}
       </div>
-      <div className="source-grid" style={{ marginTop: 8, gap: 6 }}>
-        <div className="source-item">
-          <span className="source-icon" style={{ fontSize: '14px' }}>🛰️</span>
-          <div className="source-info">
-            <span className="source-name" style={{ fontSize: '10px' }}>{satName}</span>
-            <span className="source-status" style={{ color: satColor, fontSize: '10px', fontWeight: 600 }}>{satLabel}</span>
-          </div>
-        </div>
-        <div className="source-item">
-          <span className="source-icon" style={{ fontSize: '14px' }}>🧮</span>
-          <div className="source-info">
-            <span className="source-name" style={{ fontSize: '10px' }}>Physics Engine</span>
-            <span className="source-status" style={{ color: physicsValid ? '#22c55e' : '#ef4444' }}>{physicsValid ? 'Valid' : 'Check'}</span>
-          </div>
-        </div>
-        <div className="source-item">
-          <span className="source-icon" style={{ fontSize: '14px' }}>📊</span>
-          <div className="source-info">
-            <span className="source-name" style={{ fontSize: '10px' }}>Multi-Hazard</span>
-            <span className="source-status" style={{ color: isNeuralNet ? '#22c55e' : '#eab308' }}>{mhMode === 'trained_neural_network' ? 'PyTorch' : 'Heuristic'}</span>
-          </div>
-        </div>
-        <div className="source-item">
-          <span className="source-icon" style={{ fontSize: '14px' }}>🎯</span>
-          <div className="source-info">
-            <span className="source-name" style={{ fontSize: '10px' }}>Conformal</span>
-            <span className="source-status" style={{ color: '#06b6d4' }}>{conformalGuarantee !== 'N/A' ? '90%' : 'Off'}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    </section>
   )
 }
 
+/* ═══ NATIONAL OVERVIEW (Live India tab) ═══ */
 
-/* ═══ SHARED COMPONENTS ═══ */
-function KPICard({ label, value, color }) {
+function NationalOverview({ summary }) {
+  if (!summary) return <div className="panel-loading">Loading live national feed…</div>
+
+  const totals = {
+    cells: summary.total_cells_monitored ?? 0,
+    raining: summary.areas_with_rain ?? 0,
+    heavy: summary.areas_heavy_rain ?? 0,
+    extreme: summary.areas_extreme_rain ?? 0,
+  }
+  // The feed returns its ten wettest cells whether or not any of them have
+  // rain, so only cells actually getting rain are worth listing.
+  const top = (summary.top_areas || [])
+    .filter((a) => (a.rainfall_mm_hr ?? 0) > 1)
+    .slice(0, 6)
+  const wettest = top[0]
+
   return (
-    <div className="kpi-card">
-      <div className="kpi-value" style={{ color }}>{value}</div>
-      <div className="kpi-label">{label}</div>
-    </div>
+    <>
+      <section className="card">
+        <header className="card-head">
+          <h3>🇮🇳 National Rainfall</h3>
+          <span className="tag" style={{ background: riskState(10).tint, color: riskState(10).text }}>live</span>
+        </header>
+
+        <div className="kpi-grid">
+          <KPI icon="🌧️" label="Areas in rain" value={fmt(totals.raining, 0)} sub="above 1 mm/hr" state={rainBand(3).state} />
+          <KPI icon="⛈️" label="Very heavy rain" value={fmt(totals.heavy, 0)} sub="above 25 mm/hr" state={rainBand(30).state} />
+          <KPI icon="🚨" label="Extremely heavy" value={fmt(totals.extreme, 0)} sub="above 50 mm/hr" state={rainBand(70).state} />
+          <KPI icon="🗺️" label="Grid cells" value={fmt(totals.cells, 0)} sub="national coverage" state={riskState(10)} />
+        </div>
+
+        <div className="stat-rows">
+          <StatRow
+            icon="🌧️"
+            label={wettest ? `Wettest · ${wettest.city}` : 'Wettest area'}
+            value={wettest ? `${fmt(wettest.rainfall_mm_hr, 1)} mm/hr` : 'no rain'}
+            band={wettest ? rainBand(wettest.rainfall_mm_hr) : { label: 'Dry across the grid', state: riskState(5) }}
+          />
+          <StatRow icon="⛈️" label="Very heavy rain" value={`${fmt(totals.heavy, 0)} cells`} band={{ label: 'IMD very heavy', state: riskState(55) }} />
+          <StatRow icon="🚨" label="Extremely heavy" value={`${fmt(totals.extreme, 0)} cells`} band={{ label: 'Continuous rain', state: riskState(80) }} />
+        </div>
+      </section>
+
+      <section className="card">
+        <header className="card-head"><h3>📈 Wettest Areas</h3></header>
+        <ul className="row-list">
+          {top.map((a, i) => {
+            const band = rainBand(a.rainfall_mm_hr)
+            return (
+              <li className="alert-item" key={a.city || i}>
+                <span className="alert-bar" style={{ background: band.state.fill }} />
+                <div className="alert-main">
+                  <span className="alert-place">{a.city}</span>
+                  <span className="alert-meta">{band.label} · wind {fmt(a.wind_kmh, 0)} km/h · {fmt(a.temperature_c, 0)}°C</span>
+                </div>
+                <div className="alert-right">
+                  <span className="alert-score" style={{ color: band.state.text }}>{fmt(a.rainfall_mm_hr, 1)}</span>
+                  <span className="alert-sev">mm/hr</span>
+                </div>
+              </li>
+            )
+          })}
+          {top.length === 0 && (
+            <li className="hint" style={{ marginTop: 0 }}>
+              No rainfall above 1 mm/hr anywhere in the national grid right now.
+              Switch to <b>Mumbai Replay</b> for the event timeline.
+            </li>
+          )}
+        </ul>
+      </section>
+
+      <section className="card muted-card">
+        <header className="card-head"><h3>🏙️ Mumbai Pilot</h3></header>
+        <p className="hint" style={{ marginTop: 0 }}>
+          The 6-hour flood nowcast, hazard alerts and evacuation routing run on the
+          90-cell Mumbai grid. Switch to <b>Mumbai Replay</b> to see them.
+        </p>
+      </section>
+    </>
   )
 }
 
-function MiniKPI({ label, value, color }) {
-  return (
-    <div className="mini-kpi">
-      <span className="mini-kpi-val" style={{ color }}>{value}</span>
-      <span className="mini-kpi-label">{label}</span>
-    </div>
-  )
-}

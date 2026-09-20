@@ -1,14 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { api } from '../utils/api'
 
+// Three openers that fit on one line — the list is a prompt, not a menu.
 const SUGGESTED_QUESTIONS = [
   "What if rain doubles?",
   "Will Andheri flood?",
-  "What if drainage fails in Kurla?",
-  "How bad would a cyclone be?",
-  "What if tide is really high?",
-  "What's the current risk in Dadar?",
-  "What about climate in 2050?",
   "What's the worst case?",
 ]
 
@@ -36,7 +32,7 @@ export default function WhatIfChatbot({ timestep }) {
   const [messages, setMessages] = useState([
     {
       role: 'bot',
-      content: "Hi! I'm VARUNA's What-If Simulator. Ask me anything about flood risk in Mumbai.\n\nTry: **\"What if rain doubles in Andheri?\"** or **\"Will Bandra flood?\"**",
+      content: "Ask me about flood risk anywhere in Mumbai.",
       data: null,
     }
   ])

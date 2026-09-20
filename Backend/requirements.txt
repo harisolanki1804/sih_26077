@@ -17,6 +17,9 @@ torchvision>=0.17.0
 scikit-learn>=1.4.0
 pandas>=2.2.0
 
+# --- Satellite HDF5 Data ---
+h5py>=3.10.0          # INSAT-3D/3DR HDF5 granule extraction (extractor.py)
+
 # --- IMDAA Reanalysis Data ---
 netCDF4>=1.6.0       # Read IMDAA NetCDF files
 xarray>=2024.1.0     # Multi-dimensional array handling

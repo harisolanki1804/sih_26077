@@ -15,6 +15,7 @@ Run:
 """
 
 import os
+import sys
 import json
 import math
 import random
@@ -27,6 +28,11 @@ logger = logging.getLogger("VARUNA.DataGen")
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data")
+
+# Allow standalone execution: ensure Backend/ is on sys.path for app.core imports
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+from app.core.timeline_config import EVENT_START, EVENT_END, EVENT_CODE, event_timestamp
 
 # Mumbai grid bounds
 LAT_MIN, LAT_MAX = 18.88, 19.26
@@ -407,7 +413,7 @@ def generate_dataset():
 
         timesteps.append({
             "timestep_id": t,
-            "timestamp": f"2024-07-26T{ts_hour:02d}:00:00Z",
+            "timestamp": event_timestamp(t),
             "tide_height_m": tide_h,
             "is_high_tide_locked": tide_locked,
             "storm_cells_active": len([s for s in storm_cells if s["intensity"] > 10]),
@@ -428,7 +434,7 @@ def generate_dataset():
 
     dataset = {
         "region_code": "IN-MH-BOM-01",
-        "event_code": "EVT-BOM-20240726-DELUGE",
+        "event_code": EVENT_CODE,
         "provenance_note": (
             "Synthetic dataset generated with multi-storm-cell model, spatial clustering, "
             "temporal evolution, and Gaussian noise injection. Calibrated to Mumbai SRTM 30m "
@@ -539,12 +545,12 @@ def save_datasets(dataset: Dict):
         })
 
     rainfall_data = {
-        "event_code": "EVT-BOM-20240726-DELUGE",
+        "event_code": EVENT_CODE,
         "region_code": "IN-MH-BOM-01",
         "provenance_note": "Synthetic deluge event calibrated to Mumbai SRTM topography and monsoon dynamics",
         "total_timesteps": TOTAL_TIMESTEPS,
-        "start_time": "2024-07-26T00:00:00Z",
-        "end_time": "2024-07-28T23:00:00Z",
+        "start_time": f"{EVENT_START}T00:00:00Z",
+        "end_time": f"{EVENT_END}T23:00:00Z",
         "timesteps": rainfall_timesteps,
     }
     rainfall_path = os.path.join(DATA_DIR, "rainfall", "mumbai_historical_deluge.json")
@@ -646,7 +652,7 @@ def save_datasets(dataset: Dict):
         "source": "ECMWF ERA5-Land Reanalysis (Surface & Sub-surface Soil Water)",
         "region": "Mumbai Pilot",
         "coordinates": {"latitude": 19.07, "longitude": 72.88},
-        "time_window": {"start": "2024-07-26T00:00", "end": "2024-07-28T23:00"},
+        "time_window": {"start": f"{EVENT_START}T00:00", "end": f"{EVENT_END}T23:00"},
         "records_count": TOTAL_TIMESTEPS,
         "layers": [
             {"name": "soil_moisture_0_to_7cm", "unit": "m³/m³", "description": "Surface soil moisture"},
@@ -729,4 +735,4 @@ if __name__ == "__main__":
     dataset = generate_dataset()
     verify_dataset(dataset)
     save_datasets(dataset)
-    print("\n✅ Dataset generation complete!")
+    print("\n[OK] Dataset generation complete!")

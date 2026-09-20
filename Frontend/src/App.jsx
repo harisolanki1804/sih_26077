@@ -1,22 +1,30 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from './utils/api'
-import { riskColor, fmt, getPhaseLabel, getPhaseColor } from './utils/helpers'
+import {
+  fmt, getPhaseLabel, getPhaseState, stepAlerts, stepClock, rainBand, tideBand,
+} from './utils/helpers'
 import MapView from './components/MapView'
 import IntelligencePanel from './components/IntelligencePanel'
 import LeftPanel from './components/LeftPanel'
 
+const TOTAL_STEPS = 72
+// Fallback for the "peak event" jump. The evaluation report records the peak the
+// models were scored against; when metrics are reachable we use that step so the
+// button can never drift from the report.
+const FALLBACK_PEAK_STEP = 39
+
 export default function App() {
   const [health, setHealth] = useState(null)
   const [timestep, setTimestep] = useState(1)
-  const [replayData, setReplayData] = useState(null)
+  const [replayStatus, setReplayStatus] = useState(null)
   const [replayStepData, setReplayStepData] = useState(null)
   const [aiData, setAiData] = useState(null)
   const [playing, setPlaying] = useState(false)
   const [selectedCell, setSelectedCell] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [mapMode, setMapMode] = useState('india')
+  const [mapMode, setMapMode] = useState('mumbai')
   const [liveData, setLiveData] = useState(null)
   const [liveSummary, setLiveSummary] = useState(null)
+  const [peakStep, setPeakStep] = useState(FALLBACK_PEAK_STEP)
   const intervalRef = useRef(null)
   const liveIntervalRef = useRef(null)
 
@@ -24,6 +32,16 @@ export default function App() {
     api.health().then(setHealth).catch(() => {})
     const iv = setInterval(() => api.health().then(setHealth).catch(() => {}), 15000)
     return () => clearInterval(iv)
+  }, [])
+
+  // Peak step from the frozen evaluation report, not a hardcoded guess.
+  useEffect(() => {
+    api.metrics.skill()
+      .then((d) => {
+        const peak = d?.operational?.observed_peak_timestep
+        if (Number.isFinite(peak) && peak > 0) setPeakStep(peak)
+      })
+      .catch(() => {})
   }, [])
 
   const fetchLiveData = useCallback(async () => {
@@ -34,10 +52,7 @@ export default function App() {
       ])
       setLiveData(indiaData)
       setLiveSummary(summaryData)
-      // Only set aiData from live data when in India mode
-      if (mapMode === 'india') {
-        setAiData(indiaData)
-      }
+      if (mapMode === 'india') setAiData(indiaData)
     } catch (e) {
       console.error('Live data fetch failed:', e)
     }
@@ -50,27 +65,21 @@ export default function App() {
   }, [fetchLiveData])
 
   useEffect(() => {
-    api.replayStatus().then(d => {
-      setReplayData(d)
+    api.replayStatus().then((d) => {
+      setReplayStatus(d)
       setTimestep(d.current_timestep)
-      setReplayStepData(d)
     }).catch(() => {})
   }, [])
 
   const fetchReplayStep = useCallback(async (ts) => {
     if (mapMode !== 'mumbai') return
-    setLoading(true)
     try {
       const step = await api.replayStep(ts)
       setReplayStepData(step)
-      setReplayData(prev => ({ ...prev, ...step }))
-      if (step.ai_pipeline_results) {
-        setAiData(step.ai_pipeline_results)
-      }
+      if (step.ai_pipeline_results) setAiData(step.ai_pipeline_results)
     } catch (e) {
       console.error('Replay step failed:', e)
     }
-    setLoading(false)
   }, [mapMode])
 
   useEffect(() => { fetchReplayStep(timestep) }, [timestep, fetchReplayStep])
@@ -78,13 +87,13 @@ export default function App() {
   useEffect(() => {
     if (playing && mapMode === 'mumbai') {
       intervalRef.current = setInterval(() => {
-        setTimestep(prev => {
-          if (prev >= 72) { setPlaying(false); return 72 }
+        setTimestep((prev) => {
+          if (prev >= TOTAL_STEPS) { setPlaying(false); return TOTAL_STEPS }
           return prev + 1
         })
       }, 1500)
-    } else {
-      if (intervalRef.current) clearInterval(intervalRef.current)
+    } else if (intervalRef.current) {
+      clearInterval(intervalRef.current)
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [playing, mapMode])
@@ -100,86 +109,79 @@ export default function App() {
   }
 
   const isOnline = health?.status === 'ONLINE'
-  const peakTimestep = replayStepData?.peak_timestep || 36
-  const mapData = mapMode === 'india' ? liveData : aiData
-
-  // Determine inference mode for display
-  const inferenceMode = aiData?.multi_hazard?.inference_mode || aiData?.flood_depth?.inference_mode || 'heuristic'
+  const isMumbai = mapMode === 'mumbai'
+  const mapData = isMumbai ? aiData : liveData
+  const phaseState = getPhaseState(timestep)
+  // One source for the alert count, shared by the topbar and the side panel.
+  const alerts = isMumbai ? stepAlerts(replayStepData, timestep) : []
+  const rain = rainBand(replayStepData?.avg_rainfall_1h_mm ?? 0)
+  const tide = tideBand(replayStepData?.tide_height_m ?? 0)
 
   return (
-    <div className="app-layout" style={{ gridTemplateRows: '48px 1fr' }}>
-      {/* ═══ TOPBAR ═══ */}
+    <div className="app-shell">
       <header className="topbar">
         <div className="brand">
-          <span className="brand-icon">🌊</span>
-          <div>
+          <span className="brand-mark">🌊</span>
+          <div className="brand-text">
             <h1>VARUNA</h1>
-            <span className="brand-sub">
-              {mapMode === 'india' ? 'India Weather Monitor' : 'Mumbai Flood Digital Twin'}
-            </span>
+            <span>Urban Flood Early Warning · Mumbai Pilot</span>
           </div>
         </div>
 
-        <div className="mode-toggle-bar">
-          <button className={`mode-toggle ${mapMode === 'india' ? 'active' : ''}`} onClick={() => switchMode('india')}>
-            🇮🇳 Live India
-          </button>
-          <button className={`mode-toggle ${mapMode === 'mumbai' ? 'active' : ''}`} onClick={() => switchMode('mumbai')}>
-            🏙️ Mumbai Replay
-          </button>
+        <div className="segmented">
+          <button className={`segment ${!isMumbai ? 'active' : ''}`} onClick={() => switchMode('india')}>Live India</button>
+          <button className={`segment ${isMumbai ? 'active' : ''}`} onClick={() => switchMode('mumbai')}>Mumbai Replay</button>
         </div>
 
-        {mapMode === 'mumbai' && (
-          <div className="replay-controls-topbar">
-            <button className="ctrl-btn" onClick={() => jumpTo(1)}>⏮</button>
-            <button className="ctrl-btn" onClick={() => jumpTo(Math.max(1, timestep - 1))} disabled={timestep <= 1}>◀</button>
-            <button className={`ctrl-btn ${playing ? 'play-active' : 'play'}`} onClick={() => setPlaying(!playing)}>
-              {playing ? '⏸' : '▶'}
+        {isMumbai && (
+          <div className="transport">
+            <button className="icon-btn" onClick={() => jumpTo(1)} title="Start">⏮</button>
+            <button className="icon-btn" onClick={() => jumpTo(Math.max(1, timestep - 1))} disabled={timestep <= 1} title="Back">◀</button>
+            <button className="icon-btn accent" onClick={() => setPlaying(!playing)} title="Play">
+              {playing ? '❚❚' : '▶'}
             </button>
-            <button className="ctrl-btn" onClick={() => jumpTo(Math.min(72, timestep + 1))} disabled={timestep >= 72}>▶</button>
-            <button className="ctrl-btn peak" onClick={() => jumpTo(peakTimestep)}>🔥 Peak</button>
-            <div className="progress-section">
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: `${(timestep / 72) * 100}%`, background: getPhaseColor(timestep) }} />
+            <button className="icon-btn" onClick={() => jumpTo(Math.min(TOTAL_STEPS, timestep + 1))} disabled={timestep >= TOTAL_STEPS} title="Forward">▶</button>
+            <button className="icon-btn" onClick={() => jumpTo(peakStep)}>Peak event</button>
+
+            <div className="progress">
+              <div className="progress-track">
+                <div className="progress-fill" style={{ width: `${(timestep / TOTAL_STEPS) * 100}%`, background: phaseState.fill }} />
               </div>
-              <div className="progress-info">
-                <span className="phase-tag" style={{ color: getPhaseColor(timestep) }}>{getPhaseLabel(timestep)}</span>
-                <span>{timestep}/72</span>
+              <div className="progress-meta">
+                <span style={{ color: phaseState.text }}>{getPhaseLabel(timestep)}</span>
+                <span>{stepClock(timestep)} · step {timestep}/{TOTAL_STEPS}</span>
               </div>
             </div>
           </div>
         )}
 
-        <div className="topbar-chips">
-          <span className={`chip ${isOnline ? 'chip-ok' : 'chip-err'}`}>
-            {isOnline ? '● LIVE' : '● OFFLINE'}
+        <div className="status-chips">
+          <span className={`chip ${isOnline ? 'chip-ok' : 'chip-off'}`}>
+            {isOnline ? 'Online' : 'Offline'}
           </span>
-          {mapMode === 'mumbai' && (
+          {isMumbai ? (
             <>
-              <span className="chip chip-blue">🌊 Tide: {fmt(replayStepData?.tide_height_m)}m</span>
-              <span className="chip chip-cyan">🌧 {fmt(replayStepData?.avg_rainfall_1h_mm)} mm/hr</span>
-              {aiData?.trust_score && (
-                <span className="chip chip-purple">🛡 {fmt(aiData.trust_score.trust_score, 0)}%</span>
-              )}
-              {/* Inference mode indicator */}
-              <span className={`chip ${inferenceMode === 'trained_neural_network' ? 'chip-green' : 'chip-amber'}`}>
-                🧠 {inferenceMode === 'trained_neural_network' ? 'Neural Net' : 'Heuristic'}
+              <span className="chip" style={{ background: tide.state.tint, color: tide.state.text }}>
+                🌊 Tide {fmt(replayStepData?.tide_height_m, 2)} m
+              </span>
+              <span className="chip" style={{ background: rain.state.tint, color: rain.state.text }}>
+                🌧 Rain {fmt(replayStepData?.avg_rainfall_1h_mm, 1)} mm/hr
+              </span>
+              <span className="chip" style={{ background: alerts.length ? 'var(--high-tint)' : 'var(--low-tint)', color: alerts.length ? 'var(--high-text)' : 'var(--low-text)' }}>
+                🚨 {alerts.length} alerts
               </span>
             </>
-          )}
-          {mapMode === 'india' && liveSummary && (
+          ) : (
             <>
-              <span className="chip chip-cyan">🇮🇳 {liveSummary.total_cells_monitored || 930} cells</span>
-              <span className="chip chip-blue">🌧 {liveSummary.areas_heavy_rain || 0} heavy</span>
+              <span className="chip chip-info">📍 {liveSummary?.total_cells_monitored ?? 0} grid cells</span>
+              <span className="chip chip-alert">🌧 {liveSummary?.areas_with_rain ?? 0} areas in rain</span>
             </>
           )}
         </div>
       </header>
 
-      {/* ═══ MAIN: Left Panel + Map + Right Panel ═══ */}
-      <div className="app-body three-col">
-        {/* LEFT PANEL */}
-        <div className="side-panel left-panel">
+      <div className="workspace">
+        <aside className="side-panel">
           <div className="panel-scroll">
             <LeftPanel
               timestep={timestep}
@@ -187,27 +189,23 @@ export default function App() {
               replayStepData={replayStepData}
               selectedCell={selectedCell}
               mode={mapMode}
+              liveSummary={liveSummary}
             />
           </div>
-        </div>
+        </aside>
 
-        {/* CENTER — Map (no overlay tabs) */}
-        <div className="center-panel">
-          <div className="map-container">
-            <MapView
-              timestep={timestep}
-              overlay="risk"
-              aiData={mapData}
-              replayStepData={replayStepData}
-              selectedCell={selectedCell}
-              onSelectCell={setSelectedCell}
-              mode={mapMode}
-            />
-          </div>
-        </div>
+        <main className="map-pane">
+          <MapView
+            timestep={timestep}
+            aiData={mapData}
+            replayStepData={replayStepData}
+            selectedCell={selectedCell}
+            onSelectCell={setSelectedCell}
+            mode={mapMode}
+          />
+        </main>
 
-        {/* RIGHT PANEL */}
-        <div className="side-panel right-panel">
+        <aside className="side-panel right">
           <div className="panel-scroll">
             <IntelligencePanel
               timestep={timestep}
@@ -217,7 +215,7 @@ export default function App() {
               mode={mapMode}
             />
           </div>
-        </div>
+        </aside>
       </div>
     </div>
   )

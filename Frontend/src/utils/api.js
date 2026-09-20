@@ -60,6 +60,13 @@ export const api = {
     modelStatus: () => get('/ai/model-status'),
   },
 
+  // Forecast skill — served from the frozen evaluation artifacts
+  metrics: {
+    skill: () => get('/metrics/skill'),
+    evaluation: () => get('/metrics/evaluation'),
+    nowcast: () => get('/metrics/nowcast'),
+  },
+
   // Real-Time India-Wide Data
   realtime: {
     india: () => get('/realtime/india'),

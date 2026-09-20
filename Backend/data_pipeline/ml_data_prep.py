@@ -27,7 +27,7 @@ try:
     import torch
     import torch.nn as nn
     import torch.optim as optim
-    from torch.utils.data import DataLoader, random_split
+    from torch.utils.data import DataLoader, Subset
 
     TORCH_AVAILABLE = True
 except ImportError:
@@ -39,6 +39,8 @@ try:
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
+
+from app.services.ai.feature_contract import describe_split, split_timestep_bounds
 
 from app.services.ai.data_loader import (
     VARUNADataset,
@@ -65,6 +67,44 @@ class MLDataPreparator:
         self.output_dir = os.path.join(self.data_dir, "ml_training")
         os.makedirs(self.output_dir, exist_ok=True)
 
+    # ------------------------------------------------------------------
+    # Frozen split -- feature_contract is the single source of truth
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _sample_bounds(dataset, partition: str) -> Tuple[int, int]:
+        """Map a frozen timestep partition onto sliding-window sample indices.
+
+        ``VARUNADataset.__getitem__(i)`` reads timesteps
+        ``[i, i + window + horizon)``, so a partition's samples must end
+        ``window + horizon - 1`` steps before its last timestep -- otherwise a
+        sample reads timesteps from the next partition. That is why the sample
+        partitions do not tile the whole sample axis, and why the 6-step
+        calibration window yields no sequence samples at all.
+        """
+        start, end = split_timestep_bounds()[partition]
+        span = dataset.window_size + dataset.forecast_horizon - 1
+        lo = max(0, start)
+        hi = min(end - span, len(dataset))
+        return lo, max(lo, hi)
+
+    def _partition_subset(self, dataset, partition: str):
+        lo, hi = self._sample_bounds(dataset, partition)
+        return Subset(dataset, range(lo, hi))
+
+    def _train_loader(self, dataset, batch_size: int) -> "DataLoader":
+        """DataLoader restricted to the frozen TRAIN partition.
+
+        These module trainers previously wrapped the entire dataset, so they
+        trained on the held-out test timesteps. The shipped checkpoints come
+        from ``app/services/ai/trainer.py``; this keeps the legacy entrypoints
+        from contradicting the split those checkpoints were trained under.
+        """
+        return DataLoader(
+            self._partition_subset(dataset, "train"),
+            batch_size=batch_size,
+            shuffle=True,
+        )
+
     def prepare_all(self):
         """Run full data preparation pipeline."""
         print("=" * 60)
@@ -85,24 +125,48 @@ class MLDataPreparator:
         dataset = VARUNADataset(data_path, window_size=6, forecast_horizon=6)
         print(f"  Total samples: {len(dataset)}")
 
-        # Split into train/val/test
+        # Split on the FROZEN TIMESTEP AXIS, not at random.
+        #
+        # pipeline.md Phase 1 requires this file's 70/15/15 random split to be
+        # replaced. Samples here are overlapping sliding windows, so shuffling
+        # them puts near-identical windows in train and test and quietly
+        # inflates every score derived from them. The boundaries come from
+        # feature_contract -- the same ones trainer.py and run_evaluation.py use.
         n = len(dataset)
-        n_train = int(0.7 * n)
-        n_val = int(0.15 * n)
-        n_test = n - n_train - n_val
-
-        train_set, val_set, test_set = random_split(
-            dataset, [n_train, n_val, n_test],
-            generator=torch.Generator().manual_seed(42),
-        )
-        print(f"  Train: {n_train}, Val: {n_val}, Test: {n_test}")
+        splits = {
+            name: self._sample_bounds(dataset, name)
+            for name in ("train", "calibrate", "test")
+        }
+        train_set = self._partition_subset(dataset, "train")
+        val_set = self._partition_subset(dataset, "calibrate")
+        test_set = self._partition_subset(dataset, "test")
+        print(f"  Frozen split -> {describe_split()}")
+        for name, (lo, hi) in splits.items():
+            print(f"    {name:<10} timesteps {split_timestep_bounds()[name]} -> "
+                  f"samples {lo}-{hi} ({hi - lo})")
 
         # Save dataset info
         dataset_info = {
             "total_samples": n,
-            "train_samples": n_train,
-            "val_samples": n_val,
-            "test_samples": n_test,
+            "split": {
+                "type": "frozen_time_based",
+                "description": describe_split(),
+                "timestep_bounds": {
+                    name: list(bounds) for name, bounds in split_timestep_bounds().items()
+                },
+                "sample_bounds": {name: list(bounds) for name, bounds in splits.items()},
+                "basis": (
+                    "Samples are overlapping sliding windows, so the split is "
+                    "applied on the timestep axis rather than by shuffling. A "
+                    "sample is usable only if its whole window plus forecast "
+                    "horizon fits inside the partition, which is why the sample "
+                    "partitions do not tile the axis and the 6-timestep "
+                    "calibration window yields no sequence samples."
+                ),
+            },
+            "train_samples": splits["train"][1] - splits["train"][0],
+            "val_samples": splits["calibrate"][1] - splits["calibrate"][0],
+            "test_samples": splits["test"][1] - splits["test"][0],
             "window_size": 6,
             "forecast_horizon": 6,
             "num_features": len(NUMERIC_FEATURES),
@@ -285,7 +349,7 @@ class ModuleTrainer:
         criterion = nn.BCELoss()
 
         dataset = VARUNADataset(window_size=1, forecast_horizon=1)
-        loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        loader = self._train_loader(dataset, batch_size)
 
         print(f"  Training Storm Cell Detector: {epochs} epochs, {len(dataset)} samples")
         for epoch in range(epochs):
@@ -330,7 +394,7 @@ class ModuleTrainer:
         criterion = nn.CrossEntropyLoss()
 
         dataset = VARUNADataset(window_size=1, forecast_horizon=1)
-        loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        loader = self._train_loader(dataset, batch_size)
 
         print(f"  Training Risk Heatmap U-Net: {epochs} epochs, {len(dataset)} samples")
         for epoch in range(epochs):
@@ -371,7 +435,7 @@ class ModuleTrainer:
         criterion = nn.MSELoss()
 
         dataset = VARUNADataset(window_size=6, forecast_horizon=6)
-        loader = DataLoader(dataset, batch_size=max(1, batch_size // 4), shuffle=True)
+        loader = self._train_loader(dataset, max(1, batch_size // 4))
 
         print(f"  Training Spatiotemporal Nowcaster: {epochs} epochs, {len(dataset)} samples")
         for epoch in range(epochs):
@@ -411,7 +475,7 @@ class ModuleTrainer:
         mse_crit = nn.MSELoss()
 
         dataset = VARUNADataset(window_size=1, forecast_horizon=1)
-        loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        loader = self._train_loader(dataset, batch_size)
 
         print(f"  Training Multi-Hazard Predictor: {epochs} epochs, {len(dataset)} samples")
         for epoch in range(epochs):

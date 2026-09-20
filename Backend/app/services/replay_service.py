@@ -43,7 +43,7 @@ LOCALITY = [
 ]
 
 def parse_iso_timestamp(ts_str: str) -> datetime:
-    """Parse ISO timestamp string safely, handling synthetic hour overflow (e.g. 2024-07-26T36:00:00Z)."""
+    """Parse ISO timestamp string safely, handling synthetic hour overflow (e.g. 2022-07-05T36:00:00Z)."""
     clean_str = ts_str.replace("Z", "+00:00")
     try:
         return datetime.fromisoformat(clean_str)
@@ -187,7 +187,6 @@ class ReplaySimulationEngine:
         # Lookup or create RiskEvent
         event_code = self.data_cache.get("event_code", settings.DEFAULT_EVENT_CODE)
         event = db.query(RiskEvent).filter(RiskEvent.event_code == event_code).first()
-        ts_datetime = datetime.fromisoformat(ts_data["timestamp"].replace("Z", "+00:00"))
         ts_datetime = parse_iso_timestamp(ts_data["timestamp"])
 
         if not event and region:

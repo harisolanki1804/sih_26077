@@ -124,13 +124,13 @@ Returns the active spatial grid feature matrix.
 {
   "region_id": "reg-mumbai-01",
   "region_code": "IN-MH-BOM-01",
-  "timestamp": "2024-07-26T08:00:00Z",
+  "timestamp": "2022-07-05T08:00:00Z",
   "total_cells": 90,
   "cells": [
     {
       "id": "feat-cell-0",
       "region_id": "reg-mumbai-01",
-      "timestamp": "2024-07-26T08:00:00Z",
+      "timestamp": "2022-07-05T08:00:00Z",
       "cell_index": 0,
       "cell_lat": 18.98,
       "cell_lon": 72.80,
@@ -181,7 +181,7 @@ Runs all 9 AI/ML modules on the requested timestep.
 ```json
 {
   "timestep_id": 1,
-  "timestamp": "2024-07-26T00:00:00Z",
+  "timestamp": "2022-07-05T00:00:00Z",
   "storm_cells": {
     "total_cells_detected": 1,
     "cells": [
@@ -330,6 +330,28 @@ Runs all 9 AI/ML modules on the requested timestep.
 }
 ```
 
+#### Conformal interval semantics (read before rendering uncertainty)
+
+The `conformal_prediction` block puts a **90% coverage interval on the risk/severity
+score (0-100 scale)**, not on rainfall or depth. Its half-width is the residual
+quantile measured on the **calibrate partition (timesteps 33-38, n=540 cell-level
+pairs)** by the trainer, stored per target in `models/conformal_calibration.json`.
+
+- A residual quantile is only meaningful in the unit it was measured in. Every
+  writer previously shared one calibration file, so the last calibration to run
+decided the interval for *every* quantity: the file held the rainfall calibration
+  (mm/hr, n=6) while the API applied it to severity scores, producing half-widths
+  of ~53 on a 100-point scale (every cell labelled `HIGH_UNCERTAINTY`).
+- Calibrations are now keyed by target (`risk_severity_score`, `flood_depth_cm`).
+  The evaluation suite measures coverage with `persist=False` and therefore cannot
+  overwrite the served calibration.
+- If no calibration exists for the requested target, the predictor reports itself
+  uncalibrated and uses `_fallback_interval` rather than silently serving an
+  interval derived from an unrelated quantity.
+- Do not present `uncertainty_labels` as a per-cell confidence signal unless they
+  vary across the payload; a constant label means the interval is wider than the
+  signal, which is a finding, not a UI detail.
+
 ---
 
 ### 4.3 Active Learning: `POST /api/v1/ai/crowd-report`
@@ -382,7 +404,7 @@ Validates crowd-sourced field reports against model predictions.
 ```json
 {
   "current_timestep": 36,
-  "timestamp": "2024-07-26T12:00:00Z",
+  "timestamp": "2022-07-05T12:00:00Z",
   "phase": "Peak Deluge & High Tide",
   "max_risk_score": 89.2,
   "active_alerts_count": 18,
@@ -397,7 +419,7 @@ Validates crowd-sourced field reports against model predictions.
 ```json
 {
   "timestep_id": 36,
-  "timestamp": "2024-07-26T12:00:00Z",
+  "timestamp": "2022-07-05T12:00:00Z",
   "phase": "Peak Deluge & High Tide",
   "max_risk_score": 89.2,
   "new_alerts_count": 4,
@@ -422,7 +444,7 @@ Validates crowd-sourced field reports against model predictions.
   {
     "id": "alt-36-cell-42",
     "region_id": "reg-mumbai-01",
-    "timestamp": "2024-07-26T12:00:00Z",
+    "timestamp": "2022-07-05T12:00:00Z",
     "cell_index": 42,
     "lat": 19.065,
     "lon": 72.880,
@@ -488,7 +510,7 @@ Validates crowd-sourced field reports against model predictions.
 {
   "source": "MOSDAC_INSAT3D",
   "provenance": "REAL",
-  "timestamp": "2024-07-26T08:00:00Z",
+  "timestamp": "2022-07-05T08:00:00Z",
   "channels": {
     "thermal_infrared_1_celsius": {
       "channel": "TIR1_10.8um",
@@ -522,6 +544,68 @@ Validates crowd-sourced field reports against model predictions.
 
 - **Response Structure**: Downscaled satellite infrared grid upscaled from native 4 km to 100 m using physics-guided spatial interpolation (`provenance: RECONSTRUCTED / REGRESSED`).
 
+### 4.7 Evaluation Metrics API
+
+Serves the four-family evaluation artifacts. Added because nothing exposed them,
+so the dashboard's skill panel had its numbers hardcoded. All endpoints are
+read-only and every response carries the artifact's modification time, so a
+stale report is visible rather than presented as current.
+
+#### `GET /api/v1/metrics/skill`
+
+Chart-ready summary; the shape the skill panel should bind to.
+
+```json
+{
+  "split": { "type": "frozen_time_based", "description": "train 1-32, calibrate 33-38, test 39-72" },
+  "generated_at": "2026-09-18T12:07:25Z",
+  "hazard_skill": [
+    { "hazard": "Flood", "lead_time": "+2h", "pod": 80.0, "far": 42.9,
+      "csi": 50.0, "accuracy": 88.2, "positives": 5,
+      "defined": true, "undefined_reason": null }
+  ],
+  "regression": { "flood_depth_cm": { "RMSE": 0.0, "MAE": 0.0, "R2": 0.0 } },
+  "probabilistic": {
+    "aggregate": { "brier_score": 0.0, "expected_calibration_error_ece": 0.0 },
+    "per_head": { "flash_flood": { "brier_score": 0.0, "ece": 0.0 } },
+    "conformal_per_target": { "flood_depth_cm": { "q": 0.0, "coverage_pct": 0.0, "target_coverage_pct": 90.0, "meets_guarantee": false } }
+  },
+  "operational": {
+    "lead_time_to_first_alert_hours": null,
+    "lead_time_note": "...",
+    "first_alert_timestep": 39,
+    "peak_risk_timestep": 39,
+    "observed_peak_timestep": 39,
+    "replay_lead_time_hours": 3,
+    "false_alarms_per_week": 29.6,
+    "evacuation_detour_overhead_pct": 4.9
+  },
+  "nowcast": {
+    "per_lead_time": { "+6h": { "mae_mm_hr": 0.0, "persistence_mae_mm_hr": 0.0, "mae_skill_vs_persistence_pct": 0.0 } },
+    "inference_modes": { "trained_neural_network": 19, "trend_aware_extrapolation": 15 },
+    "neural_nowcast_used": true
+  }
+}
+```
+
+**Rendering rules for the UI** (these are correctness requirements, not style):
+
+1. A hazard head with no positive events in the scored window returns `pod`/`csi` as `null` with an `undefined_reason`. Render that as "undefined", **never as 0%**.
+2. Before attributing a forecast to the ConvLSTM, read `nowcast.inference_modes`. `neural_nowcast_used: false` means every forecast came from the extrapolation fallback.
+3. `operational.lead_time_to_first_alert_hours` is `null` when the observed peak falls outside the scored window (it does here); show `lead_time_note` instead of inventing a figure.
+
+#### `GET /api/v1/metrics/evaluation`
+
+Verbatim four-family report, plus `artifact` and `artifact_modified_utc`.
+
+#### `GET /api/v1/metrics/nowcast`
+
+Verbatim per-lead-time nowcast report, including the persistence reference.
+
+#### `GET /api/v1/metrics/baseline`
+
+The frozen regression baseline: `frozen_at`, `tolerance`, `tracked_metric_count` and the tracked metrics.
+
 ---
 
 ## 5. Team Handoff Directives
@@ -535,8 +619,10 @@ Validates crowd-sourced field reports against model predictions.
 ### 5.2 Directive for Member 3 (ML Model Training)
 
 1. **Freeze Feature Input Order**: All neural networks (`MultiHazardPredictor`, `FloodDepthEstimator`, `ConvLSTM`) must take inputs formatted exactly according to the 26-element index order in Section 2.1.
-2. **Evaluation Split Discipline**: Train only on the frozen training split (Timesteps 1 to 50). Under no circumstances train on or shuffle with Timesteps 51 to 72 (the frozen test split).
+2. **Evaluation Split Discipline**: Train only on the frozen training split, **Timesteps 1 to 32**. Calibrate on **33 to 38**; never train on or shuffle with **39 to 72**, the frozen test split. (This supersedes the earlier 1-50 / 51-62 / 63-72 boundaries: every flash-flood and cloudburst event sits in timesteps 21-47, so a trailing test window had zero positives and its POD was undefined. The current boundaries keep both event types in all three partitions while preserving strict temporal order.)
 3. **Output Shape Compliance**: Models must output probabilities for the exact class names defined in `TARGET_COLUMNS` (`target_severity_class`, `target_flash_flood_flag`, `target_cloudburst_flag`, `target_waterlogging_flag`).
+4. **Reproducible Retrains**: Training is seeded (`DEFAULT_SEED = 42`, overridable with `--seed`); two retrains on the frozen split produce identical results, and the seed is recorded in `training_metadata.json`. Keep it that way — the frozen-baseline regression guard compares metric to metric, so a non-deterministic retrain makes it report drift on unchanged code and it stops detecting real regressions.
+5. **Calibrate the Served Quantity**: Persist conformal calibrations per target (`ConformalPredictor(target=...)`). The API serves `risk_severity_score`, so that target's calibration must come from the trainer; evaluation runs use `persist=False` and must not overwrite it.
 
 ---
 
@@ -549,3 +635,7 @@ Validates crowd-sourced field reports against model predictions.
 | `/api/v1/features/latest` | GET | **HTTP 200 PASSED** | Verified with 90-cell spatial grid |
 | `/api/v1/replay/step` | POST | **HTTP 200 PASSED** | Verified with step jump & alert generation |
 | `/api/v1/alerts` | GET | **HTTP 200 PASSED** | Verified with score decomposition & trust metrics |
+| `/api/v1/metrics/skill` | GET | **HTTP 200 PASSED** | Verified: 15 hazard-skill rows, nulls + reasons for undefined heads |
+| `/api/v1/metrics/evaluation` | GET | **HTTP 200 PASSED** | Verified: four-family report with artifact timestamp |
+| `/api/v1/metrics/nowcast` | GET | **HTTP 200 PASSED** | Verified: per-lead-time report with `inference_modes` |
+| `/api/v1/metrics/baseline` | GET | **HTTP 200 PASSED** | Verified: frozen baseline, 92 tracked metrics, tolerance |

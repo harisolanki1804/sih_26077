@@ -20,6 +20,7 @@ References:
 import os
 import json
 import math
+import time
 import logging
 import numpy as np
 from typing import Dict, Any, List, Optional, Tuple
@@ -50,12 +51,32 @@ class ConformalPredictor:
     P(y_{n+1} ∈ [ŷ - q, ŷ + q]) ≥ 1 - α
     """
 
-    def __init__(self, alpha: float = ALPHA_DEFAULT):
+    def __init__(
+        self,
+        alpha: float = ALPHA_DEFAULT,
+        target: Optional[str] = None,
+        persist: bool = True,
+    ):
         """
         Args:
             alpha: Significance level (1 - alpha = coverage guarantee)
+            target: Name of the quantity this predictor is calibrated for, e.g.
+                ``"risk_severity_score"`` (0-100) or ``"flood_depth_cm"``.
+                Calibrations are persisted per target. A residual quantile is
+                only valid in the unit it was measured in, so one shared
+                calibration file for every quantity silently produced
+                meaningless intervals: the file ended up holding the rainfall
+                calibration (mm/hr, n=6) while the API applied it to severity
+                scores, yielding intervals ~97% of the 0-100 scale and a
+                constant ``HIGH_UNCERTAINTY`` label for every cell.
+            persist: When False this instance measures coverage without writing
+                a calibration artifact. The evaluation suite reports coverage
+                per target but must not overwrite the calibration the API
+                serves; only the trainer owns the served artifacts.
         """
         self.alpha = alpha
+        self.target = target
+        self.persist = persist
         self.calibration_scores = []
         self.quantile_threshold = None
         self.is_calibrated = False
@@ -127,8 +148,15 @@ class ConformalPredictor:
             f"threshold={self.quantile_threshold:.2f}"
         )
 
-        # Save calibration
-        self._save_calibration(report)
+        # Save calibration (measurement-only instances deliberately do not)
+        if self.persist:
+            self._save_calibration(report)
+        else:
+            logger.info(
+                "Conformal calibration computed for measurement only (target=%s); "
+                "no artifact written",
+                self.target or "unlabelled",
+            )
 
         return report
 
@@ -245,33 +273,105 @@ class ConformalPredictor:
         }
 
     def _save_calibration(self, report: Dict):
-        """Save calibration data for persistence."""
+        """Persist this calibration under its target, preserving other targets.
+
+        Format (v2)::
+
+            {"version": 2, "targets": {"<target>": {alpha, quantile_threshold,
+             calibration_scores, report, saved_at}}}
+
+        Every writer used to clobber the same flat file, so the last calibration
+        to run decided the intervals served for *every* quantity. Keeping the
+        existing entries untouched means the trainer, the evaluation suite and
+        the API can each persist their own calibration without interfering.
+        """
+        key = self.target or "_unlabelled"
         try:
             os.makedirs(os.path.dirname(self._calibration_path), exist_ok=True)
-            save_data = {
+            data: Dict[str, Any] = {"version": 2, "targets": {}}
+
+            if os.path.exists(self._calibration_path):
+                try:
+                    with open(self._calibration_path, "r", encoding="utf-8") as f:
+                        existing = json.load(f)
+                    if isinstance(existing, dict) and existing.get("version") == 2:
+                        data = existing
+                        data.setdefault("targets", {})
+                    elif isinstance(existing, dict) and "calibration_scores" in existing:
+                        # Migrate the legacy single-calibration file rather than
+                        # discarding it: its target was never recorded, so it is
+                        # preserved under an explicit key instead of being
+                        # silently relabelled as the target being saved now.
+                        data["targets"]["_legacy_unlabelled"] = {
+                            k: existing.get(k)
+                            for k in ("alpha", "quantile_threshold", "calibration_scores", "report")
+                        }
+                        data["targets"]["_legacy_unlabelled"]["note"] = (
+                            "migrated from the pre-v2 single-calibration file, which did "
+                            "not record which quantity it was calibrated on"
+                        )
+                except Exception:
+                    pass
+
+            data["targets"][key] = {
                 "alpha": self.alpha,
                 "quantile_threshold": self.quantile_threshold,
                 "calibration_scores": self.calibration_scores,
                 "report": report,
+                "saved_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
             }
-            with open(self._calibration_path, "w") as f:
-                json.dump(save_data, f, indent=2)
+
+            tmp = self._calibration_path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            os.replace(tmp, self._calibration_path)
         except Exception as e:
             logger.warning(f"Could not save calibration: {e}")
 
-    def load_calibration(self) -> bool:
-        """Load previously saved calibration data."""
+    def load_calibration(self, target: Optional[str] = None) -> bool:
+        """Load the calibration for ``target`` (default: this instance's target).
+
+        Falls back to the legacy flat format so a pre-v2 file still loads.
+        """
+        key = target or self.target
         try:
-            if os.path.exists(self._calibration_path):
-                with open(self._calibration_path, "r") as f:
-                    data = json.load(f)
-                self.alpha = data["alpha"]
-                self.quantile_threshold = data["quantile_threshold"]
-                self.calibration_scores = data["calibration_scores"]
-                self.is_calibrated = True
-                self.coverage_guarantee = 1 - self.alpha
-                logger.info(f"Loaded conformal calibration (threshold={self.quantile_threshold:.2f})")
-                return True
+            if not os.path.exists(self._calibration_path):
+                return False
+            with open(self._calibration_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            entry: Optional[Dict[str, Any]] = None
+            if isinstance(data, dict) and data.get("version") == 2:
+                targets = data.get("targets") or {}
+                if key and key in targets:
+                    entry = targets[key]
+                else:
+                    logger.warning(
+                        "No conformal calibration stored for target %r; available: %s. "
+                        "Serving intervals from an uncalibrated predictor would be "
+                        "worse than saying so, so the heuristic fallback is used.",
+                        key,
+                        ", ".join(sorted(targets)) or "none",
+                    )
+                    return False
+            elif isinstance(data, dict) and "calibration_scores" in data:
+                entry = data
+
+            if entry is None:
+                return False
+
+            self.alpha = entry["alpha"]
+            self.quantile_threshold = entry["quantile_threshold"]
+            self.calibration_scores = entry["calibration_scores"]
+            self.is_calibrated = True
+            self.coverage_guarantee = 1 - self.alpha
+            logger.info(
+                "Loaded conformal calibration for %s (threshold=%.2f, n=%d)",
+                key or "unlabelled",
+                self.quantile_threshold,
+                len(self.calibration_scores),
+            )
+            return True
         except Exception as e:
             logger.warning(f"Could not load calibration: {e}")
         return False
@@ -387,5 +487,9 @@ class AdaptiveConformalPredictor(ConformalPredictor):
 
 
 # Singleton
-conformal_predictor = ConformalPredictor(alpha=ALPHA_DEFAULT)
+# The shared instance is used by the inference engine to put an interval on the
+# risk/severity score (0-100), so it is labelled for exactly that target. The
+# label decides which stored calibration it loads and where it saves, which is
+# what keeps it from serving intervals derived from a different quantity.
+conformal_predictor = ConformalPredictor(alpha=ALPHA_DEFAULT, target="risk_severity_score")
 adaptive_conformal = AdaptiveConformalPredictor(alpha=ALPHA_DEFAULT)
